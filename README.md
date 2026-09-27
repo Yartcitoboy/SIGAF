@@ -1,5 +1,5 @@
-# SIGAF — FarmaVence
-### Sistema Inteligente de Gestión de Inventario con Alertas de Caducidad
+# SIGAF
+### Sistema Inteligente de Gestión y Alerta Farmacéutica
 **Proyecto de Título / Capstone · Duoc UC**
 
 ---
