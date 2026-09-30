@@ -3,114 +3,128 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SIGAF — Modelo Relacional de Base de Datos (Corregido)</title>
-  <!-- Tailwind CSS CDN para estilos rápidos y profesionales -->
+  <title>SIGAF — Modelo Relacional Horizontal (Modo Captura)</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Mermaid.js para renderizado nativo de diagramas ER en SVG -->
+  <!-- Mermaid.js v10 -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     body {
-      background-color: #0f172a;
+      transition: background-color 0.2s, color 0.2s;
+    }
+    .modo-oscuro {
+      background-color: #0b1120;
       color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .modo-claro {
+      background-color: #ffffff;
+      color: #0f172a;
+    }
+    .diagram-container {
+      overflow-x: auto;
+      overflow-y: hidden;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
     }
     .mermaid svg {
-      max-width: 100% !important;
-      height: auto;
-      filter: drop-shadow(0 10px 25px rgba(0,0,0,0.3));
+      min-width: 1550px !important;
+      height: auto !important;
+      max-width: none !important;
     }
     @media print {
-      body { background-color: white; color: black; }
       .no-print { display: none !important; }
-      .card-print { border: 1px solid #cbd5e1; background: white !important; color: black !important; }
+      body { background: white !important; color: black !important; }
+      .diagram-container { overflow: visible !important; }
     }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+<body id="cuerpo" class="modo-claro min-h-screen p-4 flex flex-col items-center">
 
-  <!-- Encabezado Principal -->
-  <div class="w-full max-w-7xl flex flex-wrap items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-800 no-print">
+  <!-- Barra Superior de Herramientas y Controles para Captura -->
+  <header class="w-full max-w-[1700px] flex flex-wrap items-center justify-between gap-4 p-4 mb-4 rounded-xl bg-slate-100 border border-slate-200 shadow-sm no-print" id="barraControles">
     <div>
-      <div class="flex items-center gap-2 mb-1">
-        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
-          PROYECTO CAPSTONE · DUOC UC
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-600 text-white">
+          FORMATO PANORÁMICO / HORIZONTAL (LR)
         </span>
-        <span class="text-xs text-slate-400">SIGAF — FarmaVence</span>
+        <h1 class="text-lg font-bold text-slate-900" id="tituloTxt">
+          Diagrama Relacional SIGAF (13 Tablas Corregidas)
+        </h1>
       </div>
-      <h1 class="text-2xl md:text-3xl font-black text-white">
-        Diagrama Relacional de Base de Datos (13 Tablas Corregidas)
-      </h1>
-      <p class="text-xs md:text-sm text-slate-400 mt-1">
-        Notación Pata de Gallo (Crow's Foot) · PostgreSQL / Supabase · Trazabilidad completa con llaves foráneas (FK)
+      <p class="text-xs text-slate-500 mt-0.5">
+        Optimizado de izquierda a derecha para capturas de pantalla de informe Word
       </p>
     </div>
 
-    <div class="flex items-center gap-3">
-      <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center gap-2">
-        🖨️ Imprimir / Guardar PDF
+    <!-- Botones de Acción -->
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <!-- Selector de Fondo (Blanco para Word / Oscuro) -->
+      <button onclick="alternarFondo()" id="btnFondo" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
+        🌓 Cambiar a Fondo Oscuro
+      </button>
+
+      <!-- Botón Modo Captura Limpia (Oculta todo excepto el diagrama) -->
+      <button onclick="activarModoCaptura()" class="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5">
+        📸 Modo Captura Limpia
+      </button>
+
+      <!-- Botón Imprimir / PDF -->
+      <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5">
+        🖨️ Imprimir / PDF
       </button>
     </div>
+  </header>
+
+  <!-- Banner flotante para salir del Modo Captura -->
+  <div id="bannerSalirCaptura" class="hidden fixed top-3 right-3 z-50 bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-2xl flex items-center gap-3 border border-slate-700">
+    <span>📸 Modo Captura Activo (Usa Win + Shift + S)</span>
+    <button onclick="desactivarModoCaptura()" class="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded-md text-[11px]">
+      Salir de Modo Captura ✕
+    </button>
   </div>
 
-  <!-- Alerta de Correcciones Aplicadas frente a tu dibujo original -->
-  <div class="w-full max-w-7xl mb-8 p-5 rounded-2xl bg-slate-900 border border-teal-500/30 shadow-xl no-print">
-    <h3 class="text-sm font-bold text-teal-300 flex items-center gap-2 mb-2">
-      🛠️ Los 3 Cambios Clave que Corregimos de tu Dibujo Original:
-    </h3>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300">
-      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-        <span class="font-bold text-red-400">1. Notificación vs Reporte:</span>
-        <p class="mt-1 text-slate-400">
-          Se eliminó la línea vertical errónea entre <code class="text-teal-300">NOTIFICACION</code> y <code class="text-teal-300">REPORTE</code>. Ahora ambas se conectan directamente a <code class="text-teal-300">USUARIO</code>.
-        </p>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-        <span class="font-bold text-amber-400">2. Trazabilidad Sanitaria (ISP):</span>
-        <p class="mt-1 text-slate-400">
-          Se agregaron las relaciones obligatorias de <code class="text-teal-300">USUARIO</code> hacia <code class="text-teal-300">MOVIMIENTO_INVENTARIO</code> y <code class="text-teal-300">MERMA</code> para saber quién ejecutó cada acción.
-        </p>
-      </div>
-      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-        <span class="font-bold text-emerald-400">3. Llaves Foráneas (FK) Explícitas:</span>
-        <p class="mt-1 text-slate-400">
-          En un Modelo Relacional es obligatorio mostrar las FK en cada tabla (ej: <code class="text-teal-300">id_producto FK</code> en LOTE, <code class="text-teal-300">id_lote FK</code> en INVENTARIO).
-        </p>
-      </div>
+  <!-- Resumen de Correcciones Aplicadas (Se oculta en modo captura) -->
+  <div class="w-full max-w-[1700px] mb-4 p-3.5 rounded-xl bg-teal-50 border border-teal-200 text-xs text-teal-950 flex flex-wrap items-center justify-between gap-2 no-print" id="cajaInfo">
+    <div class="flex items-center gap-2">
+      <span class="font-bold text-teal-800">✅ Correcciones Clave:</span>
+      <span>1) Notificación y Reporte ahora nacen de <strong>Usuario</strong> (desconectados entre sí).</span>
+      <span>2) Se agregó trazabilidad de <strong>Usuario</strong> hacia <strong>Movimiento</strong> y <strong>Merma</strong>.</span>
+      <span>3) Todas las Llaves Foráneas (FK) son visibles.</span>
     </div>
+    <span class="text-[11px] text-teal-700 font-mono">Orientación: Izquierda a Derecha (LR)</span>
   </div>
 
-  <!-- Contenedor del Diagrama Mermaid -->
-  <div class="w-full max-w-7xl p-6 md:p-10 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col items-center overflow-x-auto card-print">
-    <div class="w-full flex items-center justify-between pb-4 mb-4 border-b border-slate-800 text-xs text-slate-400 no-print">
-      <span>📐 Diagrama Entidad-Relación Oficial (Mermaid SVG Interactivo)</span>
-      <span class="flex items-center gap-3">
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span> PK = Llave Primaria</span>
-        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> FK = Llave Foránea</span>
-      </span>
-    </div>
-
-    <!-- Código Mermaid para renderizar en vivo -->
+  <!-- Lienzo Panorámico del Diagrama -->
+  <main class="w-full max-w-[1700px] overflow-x-auto rounded-2xl border border-slate-200 shadow-xl bg-white p-6 md:p-8 diagram-container" id="lienzoDiagrama">
     <pre class="mermaid w-full flex justify-center text-center">
 erDiagram
+    direction LR
+
+    %% BLOQUE 1: ESTRUCTURA EMPRESA Y SUCURSALES
     FARMACIA ||--o{ SUCURSAL : "posee (1:N)"
     SUCURSAL ||--o{ BODEGA : "contiene (1:N)"
     SUCURSAL ||--o{ USUARIO : "asigna (1:N)"
     PERFIL ||--o{ USUARIO : "clasifica_rol (1:N)"
 
+    %% BLOQUE 2: CATÁLOGO, LOTES E INVENTARIO
     CATEGORIA ||--o{ PRODUCTO : "clasifica (1:N)"
     PRODUCTO ||--o{ LOTE : "agrupa (1:N)"
     LOTE ||--o{ INVENTARIO : "almacena (1:N)"
     BODEGA ||--o{ INVENTARIO : "ubica_en (1:N)"
 
+    %% BLOQUE 3: AUDITORÍA Y TRAZABILIDAD (ISP)
     INVENTARIO ||--o{ MOVIMIENTO_INVENTARIO : "registra_kardex (1:N)"
     USUARIO ||--o{ MOVIMIENTO_INVENTARIO : "ejecuta (1:N)"
 
     INVENTARIO ||--o{ MERMA : "da_de_baja (1:N)"
     USUARIO ||--o{ MERMA : "autoriza_baja (1:N)"
 
+    %% BLOQUE 4: EVENTOS DEL SISTEMA
     USUARIO ||--o{ NOTIFICACION : "recibe_alerta (1:N)"
     USUARIO ||--o{ REPORTE : "genera (1:N)"
 
+    %% DEFINICIÓN DE ENTIDADES CON ATRIBUTOS RELACIONALES
     FARMACIA {
         int id_farmacia PK
         varchar razon_social
@@ -214,54 +228,55 @@ erDiagram
         timestamp fecha_generacion
     }
     </pre>
-  </div>
-
-  <!-- Resumen de las 13 Relaciones para pasar a tu Software de Modelado -->
-  <div class="w-full max-w-7xl mt-8 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl no-print">
-    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
-      📋 Lista Rápida de Relaciones (Para copiarlas exactamente a tu programa de diseño):
-    </h3>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-      <div class="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
-        <p class="font-bold text-teal-400 font-sans text-sm mb-2">Bloque A: Entorno Farmacia e Inventario</p>
-        <p><strong class="text-white">FARMACIA (1)</strong> ➔ <strong>SUCURSAL (N)</strong> [FK: id_farmacia]</p>
-        <p><strong class="text-white">SUCURSAL (1)</strong> ➔ <strong>BODEGA (N)</strong> [FK: id_sucursal]</p>
-        <p><strong class="text-white">CATEGORIA (1)</strong> ➔ <strong>PRODUCTO (N)</strong> [FK: id_categoria]</p>
-        <p><strong class="text-white">PRODUCTO (1)</strong> ➔ <strong>LOTE (N)</strong> [FK: id_producto]</p>
-        <p><strong class="text-white">LOTE (1)</strong> ➔ <strong>INVENTARIO (N)</strong> [FK: id_lote]</p>
-        <p><strong class="text-white">BODEGA (1)</strong> ➔ <strong>INVENTARIO (N)</strong> [FK: id_bodega]</p>
-      </div>
-
-      <div class="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
-        <p class="font-bold text-teal-400 font-sans text-sm mb-2">Bloque B: Usuarios, Auditoría y Eventos</p>
-        <p><strong class="text-white">PERFIL (1)</strong> ➔ <strong>USUARIO (N)</strong> [FK: id_perfil]</p>
-        <p><strong class="text-white">SUCURSAL (1)</strong> ➔ <strong>USUARIO (N)</strong> [FK: id_sucursal]</p>
-        <p><strong class="text-white">INVENTARIO (1)</strong> ➔ <strong>MOVIMIENTO (N)</strong> [FK: id_inventario]</p>
-        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>MOVIMIENTO (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(¡Nueva!)</span></p>
-        <p><strong class="text-white">INVENTARIO (1)</strong> ➔ <strong>MERMA (N)</strong> [FK: id_inventario]</p>
-        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>MERMA (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(¡Nueva!)</span></p>
-        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>NOTIFICACION (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(Corregida)</span></p>
-        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>REPORTE (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(Corregida)</span></p>
-      </div>
-    </div>
-  </div>
-
-  <footer class="w-full max-w-7xl text-center py-8 text-xs text-slate-500 no-print">
-    SIGAF FarmaVence — Documentación de Arquitectura y Base de Datos · Proyecto de Título
-  </footer>
+  </main>
 
   <script>
+    // Inicialización de Mermaid con orientación horizontal forzada
     mermaid.initialize({
       startOnLoad: true,
-      theme: 'dark',
+      theme: 'default',
       er: {
-        useMaxWidth: true,
-        entityPadding: 15,
-        layoutDirection: 'TB',
+        useMaxWidth: false,
+        entityPadding: 16,
+        layoutDirection: 'LR',
         fontSize: 12
       }
     });
+
+    let esFondoOscuro = false;
+
+    function alternarFondo() {
+      esFondoOscuro = !esFondoOscuro;
+      const cuerpo = document.getElementById('cuerpo');
+      const lienzo = document.getElementById('lienzoDiagrama');
+      const btn = document.getElementById('btnFondo');
+
+      if (esFondoOscuro) {
+        cuerpo.className = 'modo-oscuro min-h-screen p-4 flex flex-col items-center';
+        lienzo.className = 'w-full max-w-[1700px] overflow-x-auto rounded-2xl border border-slate-800 shadow-2xl bg-slate-900 p-6 md:p-8 diagram-container';
+        btn.innerText = '☀️ Cambiar a Fondo Blanco (Word)';
+      } else {
+        cuerpo.className = 'modo-claro min-h-screen p-4 flex flex-col items-center';
+        lienzo.className = 'w-full max-w-[1700px] overflow-x-auto rounded-2xl border border-slate-200 shadow-xl bg-white p-6 md:p-8 diagram-container';
+        btn.innerText = '🌙 Cambiar a Fondo Oscuro';
+      }
+    }
+
+    function activarModoCaptura() {
+      document.getElementById('barraControles').classList.add('hidden');
+      document.getElementById('cajaInfo').classList.add('hidden');
+      document.getElementById('bannerSalirCaptura').classList.remove('hidden');
+      document.body.classList.remove('p-4');
+      document.body.classList.add('p-1');
+    }
+
+    function desactivarModoCaptura() {
+      document.getElementById('barraControles').classList.remove('hidden');
+      document.getElementById('cajaInfo').classList.remove('hidden');
+      document.getElementById('bannerSalirCaptura').classList.add('hidden');
+      document.body.classList.remove('p-1');
+      document.body.classList.add('p-4');
+    }
   </script>
 </body>
 </html>
