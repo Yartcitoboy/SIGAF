@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SIGAF — Modelo Relacional de Base de Datos (Corregido)</title>
+  <!-- Tailwind CSS CDN para estilos rápidos y profesionales -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Mermaid.js para renderizado nativo de diagramas ER en SVG -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .mermaid svg {
+      max-width: 100% !important;
+      height: auto;
+      filter: drop-shadow(0 10px 25px rgba(0,0,0,0.3));
+    }
+    @media print {
+      body { background-color: white; color: black; }
+      .no-print { display: none !important; }
+      .card-print { border: 1px solid #cbd5e1; background: white !important; color: black !important; }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+  <!-- Encabezado Principal -->
+  <div class="w-full max-w-7xl flex flex-wrap items-center justify-between gap-4 pb-6 mb-6 border-b border-slate-800 no-print">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-500/20 text-teal-400 border border-teal-500/30">
+          PROYECTO CAPSTONE · DUOC UC
+        </span>
+        <span class="text-xs text-slate-400">SIGAF — FarmaVence</span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-black text-white">
+        Diagrama Relacional de Base de Datos (13 Tablas Corregidas)
+      </h1>
+      <p class="text-xs md:text-sm text-slate-400 mt-1">
+        Notación Pata de Gallo (Crow's Foot) · PostgreSQL / Supabase · Trazabilidad completa con llaves foráneas (FK)
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center gap-2">
+        🖨️ Imprimir / Guardar PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Alerta de Correcciones Aplicadas frente a tu dibujo original -->
+  <div class="w-full max-w-7xl mb-8 p-5 rounded-2xl bg-slate-900 border border-teal-500/30 shadow-xl no-print">
+    <h3 class="text-sm font-bold text-teal-300 flex items-center gap-2 mb-2">
+      🛠️ Los 3 Cambios Clave que Corregimos de tu Dibujo Original:
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-slate-300">
+      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+        <span class="font-bold text-red-400">1. Notificación vs Reporte:</span>
+        <p class="mt-1 text-slate-400">
+          Se eliminó la línea vertical errónea entre <code class="text-teal-300">NOTIFICACION</code> y <code class="text-teal-300">REPORTE</code>. Ahora ambas se conectan directamente a <code class="text-teal-300">USUARIO</code>.
+        </p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+        <span class="font-bold text-amber-400">2. Trazabilidad Sanitaria (ISP):</span>
+        <p class="mt-1 text-slate-400">
+          Se agregaron las relaciones obligatorias de <code class="text-teal-300">USUARIO</code> hacia <code class="text-teal-300">MOVIMIENTO_INVENTARIO</code> y <code class="text-teal-300">MERMA</code> para saber quién ejecutó cada acción.
+        </p>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+        <span class="font-bold text-emerald-400">3. Llaves Foráneas (FK) Explícitas:</span>
+        <p class="mt-1 text-slate-400">
+          En un Modelo Relacional es obligatorio mostrar las FK en cada tabla (ej: <code class="text-teal-300">id_producto FK</code> en LOTE, <code class="text-teal-300">id_lote FK</code> en INVENTARIO).
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor del Diagrama Mermaid -->
+  <div class="w-full max-w-7xl p-6 md:p-10 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col items-center overflow-x-auto card-print">
+    <div class="w-full flex items-center justify-between pb-4 mb-4 border-b border-slate-800 text-xs text-slate-400 no-print">
+      <span>📐 Diagrama Entidad-Relación Oficial (Mermaid SVG Interactivo)</span>
+      <span class="flex items-center gap-3">
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-teal-400"></span> PK = Llave Primaria</span>
+        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> FK = Llave Foránea</span>
+      </span>
+    </div>
+
+    <!-- Código Mermaid para renderizar en vivo -->
+    <pre class="mermaid w-full flex justify-center text-center">
+erDiagram
+    FARMACIA ||--o{ SUCURSAL : "posee (1:N)"
+    SUCURSAL ||--o{ BODEGA : "contiene (1:N)"
+    SUCURSAL ||--o{ USUARIO : "asigna (1:N)"
+    PERFIL ||--o{ USUARIO : "clasifica_rol (1:N)"
+
+    CATEGORIA ||--o{ PRODUCTO : "clasifica (1:N)"
+    PRODUCTO ||--o{ LOTE : "agrupa (1:N)"
+    LOTE ||--o{ INVENTARIO : "almacena (1:N)"
+    BODEGA ||--o{ INVENTARIO : "ubica_en (1:N)"
+
+    INVENTARIO ||--o{ MOVIMIENTO_INVENTARIO : "registra_kardex (1:N)"
+    USUARIO ||--o{ MOVIMIENTO_INVENTARIO : "ejecuta (1:N)"
+
+    INVENTARIO ||--o{ MERMA : "da_de_baja (1:N)"
+    USUARIO ||--o{ MERMA : "autoriza_baja (1:N)"
+
+    USUARIO ||--o{ NOTIFICACION : "recibe_alerta (1:N)"
+    USUARIO ||--o{ REPORTE : "genera (1:N)"
+
+    FARMACIA {
+        int id_farmacia PK
+        varchar razon_social
+        varchar rut UK
+        varchar direccion
+    }
+
+    SUCURSAL {
+        int id_sucursal PK
+        varchar nombre
+        varchar direccion
+        int id_farmacia FK
+    }
+
+    BODEGA {
+        int id_bodega PK
+        varchar nombre
+        varchar ubicacion
+        int id_sucursal FK
+    }
+
+    CATEGORIA {
+        int id_categoria PK
+        varchar nombre
+        varchar descripcion
+    }
+
+    PRODUCTO {
+        int id_producto PK
+        varchar codigo_barras UK
+        varchar nombre
+        varchar descripcion
+        varchar unidad_medida
+        int id_categoria FK
+    }
+
+    LOTE {
+        int id_lote PK
+        varchar numero_lote
+        date fecha_vencimiento
+        date fecha_ingreso
+        int id_producto FK
+    }
+
+    INVENTARIO {
+        int id_inventario PK
+        int id_lote FK
+        int id_bodega FK
+        int stock_actual
+        varchar estado_semaforo
+    }
+
+    PERFIL {
+        int id_perfil PK
+        varchar nombre
+        varchar descripcion
+    }
+
+    USUARIO {
+        uuid id_usuario PK
+        varchar nombre
+        varchar email UK
+        varchar password_hash
+        int id_perfil FK
+        int id_sucursal FK
+        boolean activo
+    }
+
+    MOVIMIENTO_INVENTARIO {
+        int id_movimiento PK
+        int id_inventario FK
+        uuid id_usuario FK
+        varchar tipo_movimiento
+        int cantidad
+        timestamp fecha
+    }
+
+    MERMA {
+        int id_merma PK
+        int id_inventario FK
+        uuid id_usuario FK
+        varchar motivo
+        int cantidad
+        date fecha_baja
+    }
+
+    NOTIFICACION {
+        int id_notificacion PK
+        uuid id_usuario FK
+        varchar tipo
+        text mensaje
+        timestamp fecha_envio
+        varchar estado
+    }
+
+    REPORTE {
+        int id_reporte PK
+        uuid id_usuario FK
+        varchar tipo
+        varchar formato
+        timestamp fecha_generacion
+    }
+    </pre>
+  </div>
+
+  <!-- Resumen de las 13 Relaciones para pasar a tu Software de Modelado -->
+  <div class="w-full max-w-7xl mt-8 p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl no-print">
+    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+      📋 Lista Rápida de Relaciones (Para copiarlas exactamente a tu programa de diseño):
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+      <div class="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <p class="font-bold text-teal-400 font-sans text-sm mb-2">Bloque A: Entorno Farmacia e Inventario</p>
+        <p><strong class="text-white">FARMACIA (1)</strong> ➔ <strong>SUCURSAL (N)</strong> [FK: id_farmacia]</p>
+        <p><strong class="text-white">SUCURSAL (1)</strong> ➔ <strong>BODEGA (N)</strong> [FK: id_sucursal]</p>
+        <p><strong class="text-white">CATEGORIA (1)</strong> ➔ <strong>PRODUCTO (N)</strong> [FK: id_categoria]</p>
+        <p><strong class="text-white">PRODUCTO (1)</strong> ➔ <strong>LOTE (N)</strong> [FK: id_producto]</p>
+        <p><strong class="text-white">LOTE (1)</strong> ➔ <strong>INVENTARIO (N)</strong> [FK: id_lote]</p>
+        <p><strong class="text-white">BODEGA (1)</strong> ➔ <strong>INVENTARIO (N)</strong> [FK: id_bodega]</p>
+      </div>
+
+      <div class="space-y-2 bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <p class="font-bold text-teal-400 font-sans text-sm mb-2">Bloque B: Usuarios, Auditoría y Eventos</p>
+        <p><strong class="text-white">PERFIL (1)</strong> ➔ <strong>USUARIO (N)</strong> [FK: id_perfil]</p>
+        <p><strong class="text-white">SUCURSAL (1)</strong> ➔ <strong>USUARIO (N)</strong> [FK: id_sucursal]</p>
+        <p><strong class="text-white">INVENTARIO (1)</strong> ➔ <strong>MOVIMIENTO (N)</strong> [FK: id_inventario]</p>
+        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>MOVIMIENTO (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(¡Nueva!)</span></p>
+        <p><strong class="text-white">INVENTARIO (1)</strong> ➔ <strong>MERMA (N)</strong> [FK: id_inventario]</p>
+        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>MERMA (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(¡Nueva!)</span></p>
+        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>NOTIFICACION (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(Corregida)</span></p>
+        <p><strong class="text-white">USUARIO (1)</strong> ➔ <strong>REPORTE (N)</strong> [FK: id_usuario] <span class="text-emerald-400">(Corregida)</span></p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="w-full max-w-7xl text-center py-8 text-xs text-slate-500 no-print">
+    SIGAF FarmaVence — Documentación de Arquitectura y Base de Datos · Proyecto de Título
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      er: {
+        useMaxWidth: true,
+        entityPadding: 15,
+        layoutDirection: 'TB',
+        fontSize: 12
+      }
+    });
+  </script>
+</body>
+</html>
