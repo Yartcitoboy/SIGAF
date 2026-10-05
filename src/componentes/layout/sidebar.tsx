@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion, useReducedMotion } from 'framer-motion';
 import { 
   LayoutDashboard, 
   Boxes, 
@@ -90,9 +91,10 @@ const modulosNavegacion: NavItem[] = [
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800 shrink-0 sticky top-0">
+    <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800 shrink-0 sticky top-0 z-30">
       {/* Header del Sidebar: Logo y Nombre */}
       <div className="p-5 border-b border-slate-800">
         <div className="flex items-center gap-3">
@@ -120,8 +122,8 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de Navegación de los 9 Módulos */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      {/* Lista de Navegación de los 9 Módulos con Indicador Suave */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Módulos de Gestión
         </p>
@@ -130,31 +132,49 @@ export const Sidebar: React.FC = () => {
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
 
           return (
-            <Link
+            <motion.div
               key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                isActive
-                  ? 'bg-teal-600 text-white shadow-md shadow-teal-600/30'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+              className="relative"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span className="truncate">{item.nombre}</span>
-              </div>
+              <Link
+                href={item.href}
+                className={`relative z-10 flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                  isActive
+                    ? 'text-white font-semibold'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate">{item.nombre}</span>
+                </div>
 
-              {item.badge !== undefined && item.badge > 0 && (
-                <span
-                  className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full ${item.badgeColor}`}
-                >
-                  {item.badge}
-                </span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span
+                    className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${item.badgeColor}`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+
+              {/* Indicador suave que se desliza entre opciones activas */}
+              {isActive && (
+                <motion.div
+                  layoutId="sidebar-active-pill"
+                  transition={{
+                    type: 'spring',
+                    stiffness: 380,
+                    damping: 32,
+                  }}
+                  className="absolute inset-0 bg-teal-600 rounded-lg shadow-md shadow-teal-600/30 z-0"
+                />
               )}
-            </Link>
+            </motion.div>
           );
         })}
-      </div>
+      </nav>
 
       {/* Footer del Sidebar: Perfil del Usuario Administrador */}
       <div className="p-4 border-t border-slate-800 bg-slate-950/40">

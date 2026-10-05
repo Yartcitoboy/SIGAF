@@ -3,9 +3,11 @@
 import React, { useState } from 'react';
 import { mockDashboardKpis } from '@/datos-mock/inventario-data';
 import { CheckCircle2, AlertTriangle, AlertCircle, XCircle } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export const GraficoDistribucionSemaforo: React.FC = () => {
   const [segmentoActivo, setSegmentoActivo] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const total = mockDashboardKpis.totalLotesRegistrados;
   const pVerde = Math.round((mockDashboardKpis.lotesVerdes / total) * 100);
@@ -65,7 +67,7 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
@@ -80,22 +82,27 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
         </span>
       </div>
 
-      {/* Barra segmentada interactiva */}
-      <div className="h-6 w-full rounded-lg overflow-hidden flex bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5 mb-5 shadow-inner">
+      {/* Barra segmentada interactiva con animación inicial */}
+      <motion.div
+        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scaleX: 0.96 }}
+        animate={{ opacity: 1, scaleX: 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="h-6 w-full rounded-lg overflow-hidden flex bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5 mb-5 shadow-inner"
+      >
         {datos.map((item) => (
           <button
             key={item.id}
             type="button"
             style={{ width: `${item.porcentaje}%` }}
-            className={`h-full transition-all duration-300 rounded-sm cursor-pointer ${item.color} ${item.colorHover} ${
-              segmentoActivo === item.id ? 'ring-2 ring-slate-900 dark:ring-white scale-y-110 z-10' : 'opacity-90'
+            className={`h-full transition-all duration-250 rounded-sm cursor-pointer ${item.color} ${item.colorHover} ${
+              segmentoActivo === item.id ? 'ring-2 ring-slate-900 dark:ring-white scale-y-110 z-10 brightness-105' : 'opacity-90'
             }`}
             onMouseEnter={() => setSegmentoActivo(item.id)}
             onMouseLeave={() => setSegmentoActivo(null)}
             title={`${item.nombre}: ${item.cantidad} lotes (${item.porcentaje}%)`}
           />
         ))}
-      </div>
+      </motion.div>
 
       {/* Tarjetas informativas interactivas de cada color */}
       <div className="grid grid-cols-2 gap-2.5">
@@ -104,13 +111,15 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
           const isSelected = segmentoActivo === item.id;
 
           return (
-            <div
+            <motion.div
               key={item.id}
+              whileHover={shouldReduceMotion ? {} : { y: -2, transition: { duration: 0.15 } }}
+              whileTap={shouldReduceMotion ? {} : { scale: 0.985 }}
               onMouseEnter={() => setSegmentoActivo(item.id)}
               onMouseLeave={() => setSegmentoActivo(null)}
-              className={`p-3 rounded-lg border transition-all cursor-pointer ${
+              className={`p-3 rounded-lg border transition-colors cursor-pointer ${
                 isSelected
-                  ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-slate-800/80 shadow-xs translate-y-[-1px]'
+                  ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-slate-800/80 shadow-xs'
                   : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50'
               }`}
             >
@@ -130,11 +139,15 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
                 </span>
               </div>
               {isSelected && (
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 animate-fadeIn">
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1"
+                >
                   {item.descripcion}
-                </p>
+                </motion.p>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>

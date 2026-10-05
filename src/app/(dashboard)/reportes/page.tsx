@@ -2,10 +2,12 @@
 
 import React, { useState } from 'react';
 import { Header } from '@/componentes/layout/header';
+import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
 import { mockInventario, mockFarmacia } from '@/datos-mock/inventario-data';
-import { FileSpreadsheet, FileText, Upload, Download, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileSpreadsheet, FileText, Upload, Download, CheckCircle2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ReportesPage() {
   const [cargandoArchivo, setCargandoArchivo] = useState(false);
@@ -72,12 +74,12 @@ export default function ReportesPage() {
       setTimeout(() => {
         setCargandoArchivo(false);
         setArchivoSubido(nombre);
-      }, 1500);
+      }, 1200);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <TransicionPagina>
       <Header
         titulo="Centro de Reportes y Migración de Inventario"
         subtitulo="Exportación de informes sanitarios para el ISP y carga masiva mediante planilla Excel"
@@ -85,7 +87,7 @@ export default function ReportesPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Exportación de Informes Sanitarios */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 transition-all duration-200 hover:shadow-md">
           <div>
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <FileText className="w-4 h-4 text-teal-600" />
@@ -97,7 +99,7 @@ export default function ReportesPage() {
           </div>
 
           <div className="space-y-2.5">
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   Informe de Vencimientos y Semáforo FEFO
@@ -108,14 +110,14 @@ export default function ReportesPage() {
               </div>
               <button
                 onClick={() => exportarReportePDF('ISP')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
               >
                 <Download className="w-3.5 h-3.5" />
                 Descargar PDF
               </button>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   Acta Oficial de Mermas y Destrucción
@@ -126,14 +128,14 @@ export default function ReportesPage() {
               </div>
               <button
                 onClick={() => exportarReportePDF('MERMAS')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
               >
                 <Download className="w-3.5 h-3.5" />
                 Descargar PDF
               </button>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between">
+            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
               <div>
                 <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                   Planilla Completa de Inventario (Excel .XLS)
@@ -144,7 +146,7 @@ export default function ReportesPage() {
               </div>
               <button
                 onClick={() => alert('Generando planilla de cálculo Excel...')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-xs transition"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
                 Exportar XLS
@@ -154,7 +156,7 @@ export default function ReportesPage() {
         </div>
 
         {/* 2. Carga Masiva Inicial (Importación desde Excel) */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md">
           <div>
             <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
               <Upload className="w-4 h-4 text-emerald-600" />
@@ -164,14 +166,14 @@ export default function ReportesPage() {
               Si la farmacia manejaba su stock en cuadernos o Excel, sube la planilla para poblar la base de datos automáticamente.
             </p>
 
-            <div className="mt-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition cursor-pointer relative bg-slate-50/50 dark:bg-slate-800/20">
+            <div className="mt-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition-colors cursor-pointer relative bg-slate-50/50 dark:bg-slate-800/20 group">
               <input
                 type="file"
                 accept=".xlsx, .xls, .csv"
                 onChange={handleSimularExcel}
                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
               />
-              <FileSpreadsheet className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+              <FileSpreadsheet className="w-10 h-10 text-emerald-500 mx-auto mb-2 transition-transform group-hover:scale-110 duration-200" />
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
                 Haz clic o arrastra tu archivo Excel (.xlsx / .csv)
               </p>
@@ -181,20 +183,31 @@ export default function ReportesPage() {
             </div>
           </div>
 
-          {cargandoArchivo && (
-            <div className="p-3 bg-amber-50 text-amber-800 rounded-lg text-xs font-medium animate-pulse mt-4">
-              ⏳ Analizando archivo y validando fechas de caducidad...
-            </div>
-          )}
+          <AnimatePresence>
+            {cargandoArchivo && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="p-3 bg-amber-50 text-amber-800 rounded-lg text-xs font-medium animate-pulse mt-4"
+              >
+                ⏳ Analizando archivo y validando fechas de caducidad...
+              </motion.div>
+            )}
 
-          {archivoSubido && !cargandoArchivo && (
-            <div className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-2 mt-4">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Archivo &ldquo;{archivoSubido}&rdquo; validado con éxito: 150 medicamentos listos para migrar a Supabase.</span>
-            </div>
-          )}
+            {archivoSubido && !cargandoArchivo && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-2 mt-4"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Archivo &ldquo;{archivoSubido}&rdquo; validado con éxito: 150 medicamentos listos para migrar a Supabase.</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </div>
+    </TransicionPagina>
   );
 }

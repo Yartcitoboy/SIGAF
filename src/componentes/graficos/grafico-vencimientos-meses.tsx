@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { CalendarClock, TrendingUp } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export const GraficoVencimientosMeses: React.FC = () => {
   const [mesSeleccionado, setMesSeleccionado] = useState<number | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const meses = [
     { mes: 'Caducados', cantidadLotes: 2, unidades: 55, color: 'bg-red-900', nivel: 'Crítico inmediato' },
@@ -18,7 +20,7 @@ export const GraficoVencimientosMeses: React.FC = () => {
   const maxUnidades = 750;
 
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md">
       <div>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -37,7 +39,7 @@ export const GraficoVencimientosMeses: React.FC = () => {
         </p>
       </div>
 
-      {/* Gráfico de Barras Verticales Interactivo */}
+      {/* Gráfico de Barras Verticales Progresivo con Stagger */}
       <div className="h-44 flex items-end justify-between gap-3 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
         {meses.map((item, idx) => {
           const alturaPct = item.unidades === 0 ? 4 : Math.max(12, Math.round((item.unidades / maxUnidades) * 100));
@@ -51,26 +53,36 @@ export const GraficoVencimientosMeses: React.FC = () => {
               onMouseLeave={() => setMesSeleccionado(null)}
             >
               {/* Valor emergente en hover */}
-              <div
-                className={`text-[11px] font-bold transition-all duration-200 mb-1.5 ${
-                  isHovered ? 'opacity-100 transform -translate-y-1 text-slate-900 dark:text-white' : 'opacity-0'
-                }`}
+              <motion.div
+                initial={false}
+                animate={{
+                  opacity: isHovered ? 1 : 0,
+                  y: isHovered ? -4 : 2,
+                }}
+                transition={{ duration: 0.15 }}
+                className="text-[11px] font-bold mb-1.5 text-slate-900 dark:text-white pointer-events-none"
               >
                 {item.unidades} un.
-              </div>
+              </motion.div>
 
-              {/* Barra */}
+              {/* Contenedor de la Barra */}
               <div className="w-full max-w-[42px] bg-slate-100 dark:bg-slate-800/80 rounded-t-md h-full flex items-end p-0.5">
-                <div
-                  style={{ height: `${alturaPct}%` }}
-                  className={`w-full rounded-t-sm transition-all duration-300 ${item.color} ${
+                <motion.div
+                  initial={shouldReduceMotion ? { height: `${alturaPct}%` } : { height: 0 }}
+                  animate={{ height: `${alturaPct}%` }}
+                  transition={{
+                    duration: 0.65,
+                    delay: shouldReduceMotion ? 0 : idx * 0.07,
+                    ease: 'easeOut',
+                  }}
+                  className={`w-full rounded-t-sm transition-all duration-200 ${item.color} ${
                     isHovered ? 'brightness-110 shadow-md scale-x-105' : 'opacity-85'
                   }`}
                 />
               </div>
 
               {/* Etiqueta del mes */}
-              <span className={`text-[10px] mt-2 font-medium text-center truncate w-full ${
+              <span className={`text-[10px] mt-2 font-medium text-center truncate w-full transition-colors ${
                 isHovered ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500'
               }`}>
                 {item.mes}
@@ -80,8 +92,11 @@ export const GraficoVencimientosMeses: React.FC = () => {
         })}
       </div>
 
-      {/* Detalle del mes seleccionado */}
-      <div className="mt-4 pt-3 flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+      {/* Detalle del mes seleccionado con transición suave */}
+      <motion.div
+        layout
+        className="mt-4 pt-3 flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 transition-colors"
+      >
         {mesSeleccionado !== null ? (
           <>
             <span className="font-semibold text-slate-700 dark:text-slate-300">
@@ -93,10 +108,10 @@ export const GraficoVencimientosMeses: React.FC = () => {
           </>
         ) : (
           <span className="text-slate-400 text-center w-full text-[11px]">
-            💡 Selecciona un mes para ver la recomendación operativa FEFO
+            💡 Selecciona o pasa el cursor por un mes para ver la recomendación operativa FEFO
           </span>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

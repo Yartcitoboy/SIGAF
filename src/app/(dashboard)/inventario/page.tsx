@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { SemaforoBadge } from '@/componentes/ui/semaforo-badge';
+import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
 import { mockInventario, mockBodegas } from '@/datos-mock/inventario-data';
 import { Search, Filter, Boxes } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function InventarioPage() {
   const [busqueda, setBusqueda] = useState('');
@@ -24,14 +26,14 @@ export default function InventarioPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <TransicionPagina>
       <Header
         titulo="Inventario por Bodega y Semáforo FEFO"
         subtitulo="Control de existencias físicas cruzadas por lote y ubicación de almacenamiento"
       />
 
       {/* Barra de Filtros y Búsqueda */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap gap-3 items-center justify-between">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap gap-3 items-center justify-between transition-all duration-200 hover:shadow-xs">
         <div className="relative flex-1 min-w-[260px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
@@ -39,7 +41,7 @@ export default function InventarioPage() {
             placeholder="Buscar por medicamento, código de barras o N° lote..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-teal-500"
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-teal-500 transition"
           />
         </div>
 
@@ -50,7 +52,7 @@ export default function InventarioPage() {
             <select
               value={bodegaFiltro}
               onChange={(e) => setBodegaFiltro(e.target.value)}
-              className="py-1.5 px-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-1 focus:ring-teal-500"
+              className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-teal-500 transition"
             >
               <option value="TODAS">Todas las ubicaciones</option>
               {mockBodegas.map((b) => (
@@ -66,7 +68,7 @@ export default function InventarioPage() {
             <select
               value={semaforoFiltro}
               onChange={(e) => setSemaforoFiltro(e.target.value)}
-              className="py-1.5 px-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-1 focus:ring-teal-500"
+              className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-teal-500 transition"
             >
               <option value="TODOS">Todos los estados</option>
               <option value="VERDE">🟢 Vigentes (&gt;90d)</option>
@@ -79,7 +81,7 @@ export default function InventarioPage() {
       </div>
 
       {/* Tabla de Inventario */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
@@ -93,48 +95,57 @@ export default function InventarioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {inventarioFiltrado.length > 0 ? (
-                inventarioFiltrado.map((item) => (
-                  <tr key={item.id_inventario} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                    <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
-                      {item.lote?.producto?.nombre}
-                      <span className="block text-[11px] font-mono text-slate-400 font-normal">
-                        {item.lote?.producto?.codigo_barras}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 font-mono font-medium text-slate-700 dark:text-slate-300">
-                      {item.lote?.numero_lote}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      {item.bodega?.nombre}
-                      <span className="block text-[10px] text-slate-400">{item.bodega?.ubicacion}</span>
-                    </td>
-                    <td className="py-3 px-4 text-center font-bold text-slate-900 dark:text-white">
-                      {item.stock_actual} un.
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                      {item.lote?.fecha_vencimiento}
-                    </td>
-                    <td className="py-3 px-4">
-                      <SemaforoBadge
-                        estado={item.estado_semaforo}
-                        diasRestantes={item.lote?.dias_restantes}
-                      />
+              <AnimatePresence mode="popLayout">
+                {inventarioFiltrado.length > 0 ? (
+                  inventarioFiltrado.map((item) => (
+                    <motion.tr
+                      key={item.id_inventario}
+                      initial={{ opacity: 0, y: 3 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
+                        {item.lote?.producto?.nombre}
+                        <span className="block text-[11px] font-mono text-slate-400 font-normal">
+                          {item.lote?.producto?.codigo_barras}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-medium text-slate-700 dark:text-slate-300">
+                        {item.lote?.numero_lote}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                        {item.bodega?.nombre}
+                        <span className="block text-[10px] text-slate-400">{item.bodega?.ubicacion}</span>
+                      </td>
+                      <td className="py-3 px-4 text-center font-bold text-slate-900 dark:text-white">
+                        {item.stock_actual} un.
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                        {item.lote?.fecha_vencimiento}
+                      </td>
+                      <td className="py-3 px-4">
+                        <SemaforoBadge
+                          estado={item.estado_semaforo}
+                          diasRestantes={item.lote?.dias_restantes}
+                        />
+                      </td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      No se encontraron productos con los filtros seleccionados
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-slate-400">
-                    <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    No se encontraron productos con los filtros seleccionados
-                  </td>
-                </tr>
-              )}
+                )}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>
       </div>
-    </div>
+    </TransicionPagina>
   );
 }
