@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockProductos, mockCategorias } from '@/datos-mock/inventario-data';
+import { obtenerProductos, obtenerCategorias } from '@/lib/servicios/productos';
+import type { Producto, Categoria } from '@/tipos/database';
 import { Search, Plus, Pill, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -11,7 +12,31 @@ export default function ProductosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('TODAS');
 
-  const productosFiltrados = mockProductos.filter((p) => {
+  // Datos cargados desde Supabase
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function cargarDatos() {
+      try {
+        const [prods, cats] = await Promise.all([
+          obtenerProductos(),
+          obtenerCategorias(),
+        ]);
+        setProductos(prods);
+        setCategorias(cats);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargarDatos();
+  }, []);
+
+  const productosFiltrados = productos.filter((p) => {
     const coincideTexto = 
       p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       p.codigo_barras?.includes(busqueda) ||
@@ -60,7 +85,7 @@ export default function ProductosPage() {
             className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-1 focus:ring-teal-500 transition"
           >
             <option value="TODAS">Todas las categorías</option>
-            {mockCategorias.map((c) => (
+            {categorias.map((c) => (
               <option key={c.id_categoria} value={c.id_categoria.toString()}>
                 {c.nombre}
               </option>
@@ -83,9 +108,30 @@ export default function ProductosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {cargando && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    Cargando productos desde la base de datos...
+                  </td>
+                </tr>
+              )}
+              {error && !cargando && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-red-500 text-xs">
+                    Error al cargar datos: {error}
+                  </td>
+                </tr>
+              )}
+              {!cargando && !error && productosFiltrados.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    No se encontraron productos.
+                  </td>
+                </tr>
+              )}
               <AnimatePresence mode="popLayout">
                 {productosFiltrados.map((prod) => {
-                  const cat = mockCategorias.find((c) => c.id_categoria === prod.id_categoria);
+                  const cat = categorias.find((c) => c.id_categoria === prod.id_categoria);
 
                   return (
                     <motion.tr
