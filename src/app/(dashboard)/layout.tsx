@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sidebar } from '@/componentes/layout/sidebar';
+import { Toaster } from 'sonner';
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,8 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <Toaster richColors position="top-right" />
     </div>
   );
 }
+

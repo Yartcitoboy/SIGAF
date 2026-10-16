@@ -1,30 +1,54 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { SemaforoBadge } from '@/componentes/ui/semaforo-badge';
 import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockLotes, mockInventario } from '@/datos-mock/inventario-data';
+import { obtenerLotes, obtenerBodegas, type LoteConDetalle } from '@/lib/servicios/lotes';
+import { obtenerProductos } from '@/lib/servicios/productos';
+import type { Producto, Bodega } from '@/tipos/database';
 import { Search, Plus, QrCode, Filter, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalCrearLote } from '@/componentes/modales/modal-crear-lote';
 
 export default function LotesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [semaforoFiltro, setSemaforoFiltro] = useState('TODOS');
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  const lotesConStock = mockLotes.map((lote) => {
-    const inv = mockInventario.find((i) => i.id_lote === lote.id_lote);
-    return {
-      ...lote,
-      stock: inv?.stock_actual || 0,
-      bodega: inv?.bodega?.nombre || 'Sin asignar',
-    };
-  });
+  // Datos reales desde Supabase
+  const [lotes, setLotes] = useState<LoteConDetalle[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [bodegas, setBodegas] = useState<Bodega[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtrados = lotesConStock.filter((l) => {
+  const cargarDatos = async () => {
+    try {
+      setCargando(true);
+      const [lotesData, prodsData, bodegasData] = await Promise.all([
+        obtenerLotes(),
+        obtenerProductos(),
+        obtenerBodegas(),
+      ]);
+      setLotes(lotesData);
+      setProductos(prodsData);
+      setBodegas(bodegasData);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const filtrados = lotes.filter((l) => {
     const coincideTexto =
       l.numero_lote.toLowerCase().includes(busqueda.toLowerCase()) ||
-      l.producto?.nombre.toLowerCase().includes(busqueda.toLowerCase());
+      l.producto?.nombre?.toLowerCase().includes(busqueda.toLowerCase());
 
     const coincideSemaforo = semaforoFiltro === 'TODOS' || l.estado_semaforo === semaforoFiltro;
 
@@ -39,7 +63,7 @@ export default function LotesPage() {
           subtitulo="Registro de fechas de vencimiento, lote de fabricante y control de caducidad"
         />
         <button
-          onClick={() => alert('Modal: Registrar Nuevo Lote (Recepción de Mercadería)')}
+          onClick={() => setModalAbierto(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
         >
           <Plus className="w-4 h-4" />
@@ -93,6 +117,27 @@ export default function LotesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {cargando && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                    Cargando trazabilidad de lotes desde la base de datos...
+                  </td>
+                </tr>
+              )}
+              {error && !cargando && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-red-500 text-xs">
+                    Error al cargar lotes: {error}
+                  </td>
+                </tr>
+              )}
+              {!cargando && !error && filtrados.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                    No se encontraron lotes registrados.
+                  </td>
+                </tr>
+              )}
               <AnimatePresence mode="popLayout">
                 {filtrados.map((lote) => (
                   <motion.tr
@@ -107,9 +152,9 @@ export default function LotesPage() {
                       {lote.numero_lote}
                     </td>
                     <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                      {lote.producto?.nombre}
+                      {lote.producto?.nombre || 'Producto sin nombre'}
                       <span className="block text-[11px] text-slate-400 font-normal">
-                        Ubicación: {lote.bodega}
+                        Ubicación: {lote.bodega_nombre}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-500">
@@ -122,7 +167,7 @@ export default function LotesPage() {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-slate-900 dark:text-white">
-                      {lote.stock} un.
+                      {lote.stock_total} un.
                     </td>
                     <td className="py-3 px-4">
                       <SemaforoBadge
@@ -147,6 +192,15 @@ export default function LotesPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal para Registrar Entrada de Lote */}
+      <ModalCrearLote
+        abierto={modalAbierto}
+        alCerrar={() => setModalAbierto(false)}
+        alGuardarExitoso={cargarDatos}
+        productos={productos}
+        bodegas={bodegas}
+      />
     </TransicionPagina>
   );
 }

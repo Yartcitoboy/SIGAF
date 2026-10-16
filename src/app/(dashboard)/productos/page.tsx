@@ -7,10 +7,12 @@ import { obtenerProductos, obtenerCategorias } from '@/lib/servicios/productos';
 import type { Producto, Categoria } from '@/tipos/database';
 import { Search, Plus, Pill, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ModalCrearProducto } from '@/componentes/modales/modal-crear-producto';
 
 export default function ProductosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState('TODAS');
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   // Datos cargados desde Supabase
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -18,21 +20,23 @@ export default function ProductosPage() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function cargarDatos() {
-      try {
-        const [prods, cats] = await Promise.all([
-          obtenerProductos(),
-          obtenerCategorias(),
-        ]);
-        setProductos(prods);
-        setCategorias(cats);
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setCargando(false);
-      }
+  const cargarDatos = async () => {
+    try {
+      setCargando(true);
+      const [prods, cats] = await Promise.all([
+        obtenerProductos(),
+        obtenerCategorias(),
+      ]);
+      setProductos(prods);
+      setCategorias(cats);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCargando(false);
     }
+  };
+
+  useEffect(() => {
     cargarDatos();
   }, []);
 
@@ -55,7 +59,7 @@ export default function ProductosPage() {
           subtitulo="Ficha técnica de medicamentos, código de barras y clasificación terapéutica"
         />
         <button
-          onClick={() => alert('Modal: Nuevo Producto (Ficha técnica)')}
+          onClick={() => setModalAbierto(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
         >
           <Plus className="w-4 h-4" />
@@ -180,6 +184,14 @@ export default function ProductosPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de Creación de Producto */}
+      <ModalCrearProducto
+        abierto={modalAbierto}
+        alCerrar={() => setModalAbierto(false)}
+        alGuardarExitoso={cargarDatos}
+        categorias={categorias}
+      />
     </TransicionPagina>
   );
 }
