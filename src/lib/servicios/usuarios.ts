@@ -1,12 +1,5 @@
-// ============================================================
-//  Servicio de Usuarios y Control de Acceso (RBAC) - Supabase
-//  Capa de acceso a datos para gestión de personal.
-// ============================================================
-import { createClient } from '@/lib/supabase/client';
-import type { Usuario, Perfil, Sucursal } from '@/tipos/database';
-
-const supabase = createClient();
-
+import { leerTabla } from "./datos";
+import type { Usuario, Perfil, Sucursal } from "@/tipos/database";
 export interface NuevoUsuarioPayload {
   nombre: string;
   email: string;
@@ -15,76 +8,38 @@ export interface NuevoUsuarioPayload {
   id_sucursal: number | null;
   activo: boolean;
 }
-
-/** Obtiene la lista completa de colaboradores con su perfil y sucursal. */
+export function obtenerPerfiles(): Promise<Perfil[]> {
+  return leerTabla("perfil");
+}
+export function obtenerSucursales(): Promise<Sucursal[]> {
+  return leerTabla("sucursal");
+}
 export async function obtenerUsuarios(): Promise<Usuario[]> {
-  const { data, error } = await supabase
-    .from('usuario')
-    .select(`
-      *,
-      perfil:id_perfil (*),
-      sucursal:id_sucursal (*)
-    `)
-    .order('nombre', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Usuario[];
+  const [usuarios, perfiles, sucursales] = await Promise.all([
+    leerTabla("usuario"),
+    obtenerPerfiles(),
+    obtenerSucursales(),
+  ]);
+  return usuarios.map((u) => ({
+    ...u,
+    perfil: perfiles.find((p) => p.id_perfil === u.id_perfil),
+    sucursal: sucursales.find((s) => s.id_sucursal === u.id_sucursal),
+  }));
 }
-
-/** Obtiene los roles/perfiles disponibles en el sistema (ADMIN, BODEGUERO, AUXILIAR). */
-export async function obtenerPerfiles(): Promise<Perfil[]> {
-  const { data, error } = await supabase
-    .from('perfil')
-    .select('*')
-    .order('id_perfil', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Perfil[];
+async function solicitar(datos: object, metodo: "POST" | "PATCH") {
+  const respuesta = await fetch("/api/usuarios", {
+    method: metodo,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(datos),
+  });
+  const json = await respuesta.json();
+  if (!respuesta.ok)
+    throw new Error(json.error || "No se pudo guardar la cuenta.");
+  return json as Usuario;
 }
-
-/** Obtiene las sucursales de farmacia para asignación laboral. */
-export async function obtenerSucursales(): Promise<Sucursal[]> {
-  const { data, error } = await supabase
-    .from('sucursal')
-    .select('*')
-    .order('id_sucursal', { ascending: true });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as Sucursal[];
-}
-
-/** Inserta un nuevo usuario en la base de datos. */
-export async function crearUsuario(payload: NuevoUsuarioPayload): Promise<Usuario> {
-  // Simulamos un hash seguro para entorno académico si no viene encriptado
-  const passwordHash = payload.password
-    ? `$2a$10$hash_${btoa(payload.password).slice(0, 20)}`
-    : '$2a$10$defaultDemoHash2026';
-
-  const { data, error } = await supabase
-    .from('usuario')
-    .insert([
-      {
-        nombre: payload.nombre.trim(),
-        email: payload.email.trim().toLowerCase(),
-        password_hash: passwordHash,
-        id_perfil: payload.id_perfil,
-        id_sucursal: payload.id_sucursal || null,
-        activo: payload.activo ?? true,
-      },
-    ])
-    .select(`
-      *,
-      perfil:id_perfil (*),
-      sucursal:id_sucursal (*)
-    `)
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
-      throw new Error(`El correo electrónico "${payload.email}" ya está registrado.`);
-    }
-    throw new Error(error.message);
-  }
-
-  return data as Usuario;
-}
+export const crearUsuario = (datos: NuevoUsuarioPayload) =>
+  solicitar(datos, "POST");
+export const editarUsuario = (id_usuario: string, datos: NuevoUsuarioPayload) =>
+  solicitar({ ...datos, id_usuario }, "PATCH");
+export const restablecerPassword = (id_usuario: string, password: string) =>
+  solicitar({ id_usuario, password, accion: "password" }, "PATCH");

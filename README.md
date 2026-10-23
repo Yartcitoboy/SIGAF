@@ -1,4 +1,6 @@
 # SIGAF
+
+La implementación de operación autenticada, permisos, FEFO transaccional, alertas y exportaciones se activa siguiendo [Puesta en marcha](docs/puesta-en-marcha.md). Consulta ese documento para aplicar las migraciones, vincular la primera cuenta y configurar Supabase/Resend.
 ### Sistema Inteligente de Gestión y Alerta Farmacéutica
 **Proyecto de Título / Capstone · Duoc UC**
 

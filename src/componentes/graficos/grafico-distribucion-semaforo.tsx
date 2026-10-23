@@ -1,156 +1,58 @@
-'use client';
-
-import React, { useState } from 'react';
-import { mockDashboardKpis } from '@/datos-mock/inventario-data';
-import { CheckCircle2, AlertTriangle, AlertCircle, XCircle } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
-
-export const GraficoDistribucionSemaforo: React.FC = () => {
-  const [segmentoActivo, setSegmentoActivo] = useState<string | null>(null);
-  const shouldReduceMotion = useReducedMotion();
-
-  const total = mockDashboardKpis.totalLotesRegistrados;
-  const pVerde = Math.round((mockDashboardKpis.lotesVerdes / total) * 100);
-  const pAmarillo = Math.round((mockDashboardKpis.lotesAmarillos / total) * 100);
-  const pRojo = Math.round((mockDashboardKpis.lotesCriticos / total) * 100);
-  const pVencido = Math.round((mockDashboardKpis.lotesVencidos / total) * 100);
-
-  const datos = [
-    {
-      id: 'verde',
-      nombre: 'Vigentes (>90d)',
-      cantidad: mockDashboardKpis.lotesVerdes,
-      porcentaje: pVerde,
-      color: 'bg-emerald-500',
-      colorTexto: 'text-emerald-700 dark:text-emerald-400',
-      colorHover: 'hover:bg-emerald-600',
-      borde: 'border-emerald-500',
-      icono: CheckCircle2,
-      descripcion: 'Lotes seguros para dispensación regular.',
-    },
-    {
-      id: 'amarillo',
-      nombre: 'Preventivos (30-90d)',
-      cantidad: mockDashboardKpis.lotesAmarillos,
-      porcentaje: pAmarillo,
-      color: 'bg-amber-400',
-      colorTexto: 'text-amber-700 dark:text-amber-400',
-      colorHover: 'hover:bg-amber-500',
-      borde: 'border-amber-400',
-      icono: AlertTriangle,
-      descripcion: 'Priorizar venta inmediata con algoritmo FEFO.',
-    },
-    {
-      id: 'rojo',
-      nombre: 'Críticos (<30d)',
-      cantidad: mockDashboardKpis.lotesCriticos,
-      porcentaje: pRojo,
-      color: 'bg-red-500',
-      colorTexto: 'text-red-700 dark:text-red-400',
-      colorHover: 'hover:bg-red-600',
-      borde: 'border-red-500',
-      icono: AlertCircle,
-      descripcion: 'Alerta máxima: gestionar devolución o liquidación.',
-    },
-    {
-      id: 'vencido',
-      nombre: 'Caducados (0d)',
-      cantidad: mockDashboardKpis.lotesVencidos,
-      porcentaje: pVencido,
-      color: 'bg-red-900',
-      colorTexto: 'text-red-900 dark:text-red-400',
-      colorHover: 'hover:bg-red-950',
-      borde: 'border-red-900',
-      icono: XCircle,
-      descripcion: 'Dispensación bloqueada: retiro obligatorio a merma.',
-    },
+import type { Inventario } from "@/tipos/database";
+export function GraficoDistribucionSemaforo({
+  inventario,
+}: {
+  inventario: Inventario[];
+}) {
+  const estados = [
+    { estado: "VERDE", nombre: "Vigente", color: "bg-emerald-500" },
+    { estado: "AMARILLO", nombre: "Preventivo", color: "bg-amber-400" },
+    { estado: "NARANJO", nombre: "Crítico", color: "bg-orange-500" },
+    { estado: "VENCIDO", nombre: "Caducado", color: "bg-red-600" },
   ];
-
+  const total = inventario.reduce((a, i) => a + i.stock_actual, 0);
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs transition-all duration-200 hover:shadow-md">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-            Distribución del Semáforo de Riesgo
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Clasificación total de los {total} lotes activos
-          </p>
-        </div>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-          En tiempo real
-        </span>
-      </div>
-
-      {/* Barra segmentada interactiva con animación inicial */}
-      <motion.div
-        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, scaleX: 0.96 }}
-        animate={{ opacity: 1, scaleX: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="h-6 w-full rounded-lg overflow-hidden flex bg-slate-100 dark:bg-slate-800 p-0.5 gap-0.5 mb-5 shadow-inner"
+    <section className="panel">
+      <h2 className="font-semibold">Distribución del inventario</h2>
+      <p className="mt-1 text-xs text-muted">
+        Unidades físicas según riesgo de vencimiento
+      </p>
+      <div
+        className="my-6 flex h-5 overflow-hidden rounded-full bg-elevado"
+        role="img"
+        aria-label="Distribución de unidades por semáforo"
       >
-        {datos.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            style={{ width: `${item.porcentaje}%` }}
-            className={`h-full transition-all duration-250 rounded-sm cursor-pointer ${item.color} ${item.colorHover} ${
-              segmentoActivo === item.id ? 'ring-2 ring-slate-900 dark:ring-white scale-y-110 z-10 brightness-105' : 'opacity-90'
-            }`}
-            onMouseEnter={() => setSegmentoActivo(item.id)}
-            onMouseLeave={() => setSegmentoActivo(null)}
-            title={`${item.nombre}: ${item.cantidad} lotes (${item.porcentaje}%)`}
-          />
-        ))}
-      </motion.div>
-
-      {/* Tarjetas informativas interactivas de cada color */}
-      <div className="grid grid-cols-2 gap-2.5">
-        {datos.map((item) => {
-          const Icon = item.icono;
-          const isSelected = segmentoActivo === item.id;
-
+        {estados.map((e) => {
+          const unidades = inventario
+            .filter((i) => i.estado_semaforo === e.estado)
+            .reduce((a, i) => a + i.stock_actual, 0);
           return (
-            <motion.div
-              key={item.id}
-              whileHover={shouldReduceMotion ? {} : { y: -2, transition: { duration: 0.15 } }}
-              whileTap={shouldReduceMotion ? {} : { scale: 0.985 }}
-              onMouseEnter={() => setSegmentoActivo(item.id)}
-              onMouseLeave={() => setSegmentoActivo(null)}
-              className={`p-3 rounded-lg border transition-colors cursor-pointer ${
-                isSelected
-                  ? 'border-slate-900 dark:border-white bg-slate-50 dark:bg-slate-800/80 shadow-xs'
-                  : 'border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <span className={`w-2.5 h-2.5 rounded-full ${item.color}`}></span>
-                  {item.nombre}
-                </span>
-                <Icon className={`w-3.5 h-3.5 ${item.colorTexto}`} />
-              </div>
-              <div className="flex items-baseline justify-between mt-2">
-                <span className="text-lg font-extrabold text-slate-900 dark:text-white">
-                  {item.cantidad} <span className="text-[11px] font-normal text-slate-500">lotes</span>
-                </span>
-                <span className={`text-xs font-bold ${item.colorTexto}`}>
-                  {item.porcentaje}%
-                </span>
-              </div>
-              {isSelected && (
-                <motion.p
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1"
-                >
-                  {item.descripcion}
-                </motion.p>
-              )}
-            </motion.div>
+            <div
+              key={e.estado}
+              title={e.nombre + ": " + unidades}
+              className={e.color}
+              style={{ width: (total ? (unidades / total) * 100 : 0) + "%" }}
+            />
           );
         })}
       </div>
-    </div>
+      <div className="space-y-4">
+        {estados.map((e) => {
+          const unidades = inventario
+            .filter((i) => i.estado_semaforo === e.estado)
+            .reduce((a, i) => a + i.stock_actual, 0);
+          return (
+            <div key={e.estado} className="flex items-center gap-2 text-sm">
+              <span className={"h-2.5 w-2.5 rounded-full " + e.color} />
+              <span className="flex-1 text-muted">{e.nombre}</span>
+              <strong>{unidades.toLocaleString("es-CL")}</strong>
+              <span className="w-10 text-right text-xs text-muted">
+                {total ? Math.round((unidades / total) * 100) : 0}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
-};
+}

@@ -1,122 +1,87 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Header } from '@/componentes/layout/header';
-import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockNotificaciones } from '@/datos-mock/inventario-data';
-import { Check, Clock, Mail, ShieldAlert, AlertTriangle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
+"use client";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Header } from "@/componentes/layout/header";
+import { EstadoDatos } from "@/componentes/ui/estado-datos";
+import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
+import { useConsulta } from "@/lib/hooks/use-consulta";
+import { obtenerNotificaciones, marcarLeida } from "@/lib/servicios/alertas";
+import { useRol } from "@/context/rol-context";
 export default function AlertasPage() {
-  const [notificaciones, setNotificaciones] = useState(mockNotificaciones);
-
-  const marcarComoLeida = (id: number) => {
-    setNotificaciones(prev =>
-      prev.map(n => n.id_notificacion === id ? { ...n, estado: 'LEIDO' } : n)
-    );
-  };
-
+  const consulta = useConsulta(obtenerNotificaciones);
+  const { rolActual, soloLectura } = useRol();
+  const [pendientes, setPendientes] = useState(false);
+  const [ocupado, setOcupado] = useState<number | null>(null);
+  const filas =
+    consulta.datos?.filter((n) => !pendientes || n.estado !== "LEIDO") ?? [];
+  async function atender(id: number) {
+    setOcupado(id);
+    try {
+      await marcarLeida(id);
+      await consulta.recargar();
+      toast.success("Alerta atendida");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo atender.");
+    } finally {
+      setOcupado(null);
+    }
+  }
   return (
     <TransicionPagina>
       <Header
-        titulo="Bandeja de Alertas de Caducidad"
-        subtitulo="Notificaciones generadas automáticamente a las 00:00 hrs enviadas a web y correo electrónico"
+        titulo="Centro de alertas"
+        subtitulo="Historial de caducidad, destinatarios y atención de notificaciones."
       />
-
-      {/* Tarjeta explicativa del proceso automático con hover suave */}
-      <div className="bg-slate-900 text-white p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-md transition-all duration-200 hover:shadow-lg">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-xs uppercase font-bold text-emerald-400 tracking-wider">Cron Worker Activo</span>
-          </div>
-          <h3 className="font-bold text-base">Evaluación Nocturna Automática</h3>
-          <p className="text-xs text-slate-300 max-w-xl">
-            Cada día a las 00:00 hrs, el sistema analiza las fechas de caducidad de todos los lotes. Si un lote pasa a Amarillo (&lt;90d) o Rojo (&lt;30d/Caducado), despacha un email transaccional vía Resend y genera una alerta aquí.
-          </p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={pendientes}
+          onChange={(e) => setPendientes(e.target.checked)}
+        />
+        Mostrar solo pendientes
+      </label>
+      <EstadoDatos {...consulta} vacio={!filas.length} />
+      {consulta.datos && !consulta.cargando && !consulta.error && (
+        <div className="space-y-3">
+          {filas.map((n) => (
+            <article
+              key={n.id_notificacion}
+              className="panel flex flex-wrap items-center justify-between gap-4"
+            >
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-acento">
+                  {n.tipo} · {n.estado === "LEIDO" ? "Atendida" : "Pendiente"}
+                </span>
+                <p className="mt-2 text-sm font-medium">{n.mensaje}</p>
+                <p className="mt-2 text-xs text-muted">
+                  {n.fecha_envio.replace("T", " ").slice(0, 16)}
+                  {rolActual === "ADMIN" &&
+                    " · Destinatario: " +
+                      (n.destinatario_email || n.id_usuario) +
+                      " · Correo: " +
+                      (n.estado_correo || "Sin registro")}
+                </p>
+                {rolActual === "ADMIN" && n.error_correo && (
+                  <p className="mt-1 text-xs text-red-700 dark:text-red-300">
+                    {n.error_correo}
+                  </p>
+                )}
+              </div>
+              {n.estado !== "LEIDO" && (
+                <button
+                  disabled={ocupado !== null || soloLectura}
+                  onClick={() => atender(n.id_notificacion)}
+                  className="boton-secundario"
+                >
+                  {ocupado === n.id_notificacion
+                    ? "Guardando…"
+                    : "Marcar atendida"}
+                </button>
+              )}
+            </article>
+          ))}
         </div>
-        <div className="flex items-center gap-2 text-xs bg-slate-800 px-3 py-2 rounded-xl border border-slate-700">
-          <Mail className="w-4 h-4 text-teal-400" />
-          <span>Integrado con Resend REST API</span>
-        </div>
-      </div>
-
-      {/* Lista de Notificaciones */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800 transition-all duration-200 hover:shadow-md">
-        <AnimatePresence>
-          {notificaciones.map((notif) => {
-            const esCritica = notif.mensaje?.includes('VENCIDO') || notif.mensaje?.includes('CRÍTICO');
-            const esPendiente = notif.estado === 'PENDIENTE';
-
-            return (
-              <motion.div
-                key={notif.id_notificacion}
-                layout
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className={`p-5 flex items-start justify-between gap-4 transition-colors duration-150 ${
-                  esPendiente ? 'bg-amber-50/20 dark:bg-amber-950/10' : ''
-                }`}
-              >
-                <div className="flex items-start gap-3.5">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                    esCritica
-                      ? 'bg-red-100 text-red-600 dark:bg-red-950/60'
-                      : 'bg-amber-100 text-amber-600 dark:bg-amber-950/60'
-                  }`}>
-                    {esCritica ? <ShieldAlert className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        esCritica
-                          ? 'bg-red-500 text-white'
-                          : 'bg-amber-400 text-amber-950'
-                      }`}>
-                        {esCritica ? 'URGENTE / CADUCIDAD' : 'PREVENTIVO / FEFO'}
-                      </span>
-                      <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {notif.fecha_envio}
-                      </span>
-                    </div>
-
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1.5">
-                      {notif.mensaje}
-                    </p>
-
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
-                      <span>Lote: <strong className="text-slate-700 dark:text-slate-300 font-mono">{notif.lote_afectado}</strong></span>
-                      <span>·</span>
-                      <span className="text-teal-600 dark:text-teal-400 flex items-center gap-1">
-                        <Mail className="w-3.5 h-3.5" /> Enviado a administradores y bodega
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="shrink-0 flex items-center gap-2">
-                  {esPendiente ? (
-                    <button
-                      onClick={() => marcarComoLeida(notif.id_notificacion)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      Marcar Atendida
-                    </button>
-                  ) : (
-                    <span className="text-xs text-slate-400 font-medium px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800">
-                      Atendida
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </div>
+      )}
     </TransicionPagina>
   );
 }

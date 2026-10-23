@@ -1,8 +1,35 @@
 @import "tailwindcss";
 
+/* El modo explícito prevalece sobre el sistema. El login conserva su modo automático. */
+@custom-variant dark {
+  &:where([data-modo="oscuro"], [data-modo="oscuro"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-modo="claro"], [data-modo="claro"] *)) {
+      @slot;
+    }
+  }
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --lienzo: #f8fafc;
+  --superficie: #ffffff;
+  --sutil: #f8fafc;
+  --elevado: #f1f5f9;
+  --tinta: #0f172a;
+  --muted: #475569;
+  --borde: #cbd5e1;
+  --separador: #e2e8f0;
+  --accion: #0f766e;
+  --accion-hover: #115e59;
+  --sobre-accion: #ffffff;
+  --acento: #0f766e;
+  --acento-suave: #f0fdfa;
+  --acento-borde: #0d9488;
+  --grafico: #14b8a6;
 }
 
 @theme inline {
@@ -10,24 +37,140 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-lienzo: var(--lienzo);
+  --color-superficie: var(--superficie);
+  --color-sutil: var(--sutil);
+  --color-elevado: var(--elevado);
+  --color-tinta: var(--tinta);
+  --color-muted: var(--muted);
+  --color-borde: var(--borde);
+  --color-separador: var(--separador);
+  --color-accion: var(--accion);
+  --color-accion-hover: var(--accion-hover);
+  --color-sobre-accion: var(--sobre-accion);
+  --color-acento: var(--acento);
+  --color-acento-suave: var(--acento-suave);
+  --color-acento-borde: var(--acento-borde);
+  --color-grafico: var(--grafico);
+  --color-barra: var(--barra);
+  --color-barra-tinta: var(--barra-tinta);
+  --color-barra-muted: var(--barra-muted);
+  --color-barra-borde: var(--barra-borde);
+  --color-barra-hover: var(--barra-hover);
+  --color-barra-activa: var(--barra-activa);
+  --color-barra-activa-tinta: var(--barra-activa-tinta);
+  --color-velo: #000020;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --superficie: #0f172a;
+    --sutil: #1e293b;
+    --elevado: #334155;
+    --tinta: #f1f5f9;
+    --muted: #cbd5e1;
+    --borde: #475569;
+    --separador: #334155;
+    --acento: #99f6e4;
+    --acento-suave: #134e4a;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Efecto Shimmer para Skeleton Loaders */
+.tema-rol {
+  color: var(--tinta);
+  color-scheme: light;
+  background:
+    radial-gradient(
+      ellipse at 100% 0%,
+      color-mix(in srgb, var(--acento-borde) 9%, transparent),
+      transparent 45%
+    ),
+    var(--lienzo);
+  accent-color: var(--accion);
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.tema-rol[data-modo="oscuro"] {
+  color-scheme: dark;
+}
+.tema-rol ::selection {
+  background: var(--accion);
+  color: var(--sobre-accion);
+}
+.tema-rol :is(button, a, summary, input, select, textarea):focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 3px;
+}
+.barra-lateral {
+  background: linear-gradient(
+    165deg,
+    var(--barra),
+    color-mix(in srgb, var(--barra) 92%, var(--paleta-3))
+  );
+  color: var(--barra-tinta);
+  box-shadow: 8px 0 40px color-mix(in srgb, var(--barra) 6%, transparent);
+}
+.barra-lateral :is(button, a):focus-visible {
+  outline-color: var(--barra-tinta);
+}
+.metrica {
+  position: relative;
+  overflow: hidden;
+}
+.metrica::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--paleta-3),
+    var(--paleta-4),
+    var(--paleta-5)
+  );
+}
+.barra-grafico {
+  background: linear-gradient(0deg, var(--grafico), var(--acento-borde));
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-borde bg-superficie p-5 text-tinta shadow-xs;
+  }
+  .campo {
+    @apply min-h-11 w-full rounded-xl border border-borde bg-sutil px-3 py-2 text-sm text-tinta outline-none transition placeholder:text-muted focus:border-acento-borde focus:ring-2 focus:ring-acento-borde/20;
+  }
+  .boton-primario {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accion px-4 py-2 text-sm font-semibold text-sobre-accion transition hover:bg-accion-hover disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .boton-secundario {
+    @apply inline-flex min-h-11 items-center gap-2 rounded-xl border border-borde bg-superficie px-4 py-2 text-sm font-medium text-tinta transition hover:bg-elevado disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .tabla {
+    @apply w-full text-left text-sm;
+  }
+  .tabla th {
+    @apply whitespace-nowrap bg-sutil px-4 py-3 text-xs font-semibold text-muted;
+  }
+  .tabla td {
+    @apply border-t border-separador px-4 py-3;
+  }
+  .tabla tr:hover td {
+    @apply bg-sutil/70;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -40,12 +183,46 @@ body {
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(226, 232, 240, 0.4) 25%,
-    rgba(241, 245, 249, 0.8) 50%,
-    rgba(226, 232, 240, 0.4) 75%
+    var(--sutil) 25%,
+    var(--elevado) 50%,
+    var(--sutil) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s infinite ease-in-out;
+}
+
+/* Panel de consulta: sobre la pantalla actual, sin cambiar la conexión de datos. */
+.panel-lateral {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(100%, 30rem);
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--borde);
+  border-radius: 1.5rem 0 0 1.5rem;
+}
+.panel-lateral[open] {
+  animation: abrir-panel 200ms ease-out both;
+}
+@keyframes abrir-panel {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (max-width: 480px) {
+  .panel-lateral {
+    border-radius: 0;
+    border-left: 0;
+  }
 }
 
 /* Respeto estricto a prefers-reduced-motion */

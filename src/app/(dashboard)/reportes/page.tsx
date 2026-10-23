@@ -1,213 +1,266 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Header } from '@/componentes/layout/header';
-import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockInventario, mockFarmacia } from '@/datos-mock/inventario-data';
-import { FileSpreadsheet, FileText, Upload, Download, CheckCircle2 } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { motion, AnimatePresence } from 'framer-motion';
-
+"use client";
+import { useState } from "react";
+import { toast } from "sonner";
+import { FileDown, FileSpreadsheet } from "lucide-react";
+import { Header } from "@/componentes/layout/header";
+import { EstadoDatos } from "@/componentes/ui/estado-datos";
+import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
+import { useConsulta } from "@/lib/hooks/use-consulta";
+import { obtenerOperacion } from "@/lib/servicios/operacion";
+import {
+  prepararReporte,
+  crearPDF,
+  crearLibroExcel,
+  type TipoInforme,
+} from "@/lib/servicios/reportes";
+import { guardarFila } from "@/lib/servicios/datos";
+import { useRol } from "@/context/rol-context";
+import { fechaChile } from "@/lib/servicios/fechas";
 export default function ReportesPage() {
-  const [cargandoArchivo, setCargandoArchivo] = useState(false);
-  const [archivoSubido, setArchivoSubido] = useState<string | null>(null);
-
-  // Generador real de PDF en el navegador usando jsPDF
-  const exportarReportePDF = (tipo: 'ISP' | 'MERMAS' | 'FEFO') => {
-    const doc = new jsPDF();
-
-    // Encabezado
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text(mockFarmacia.razon_social, 14, 20);
-
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`RUT: ${mockFarmacia.rut} | Dirección: ${mockFarmacia.direccion}`, 14, 26);
-    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CL')} ${new Date().toLocaleTimeString('es-CL')}`, 14, 32);
-
-    doc.setFontSize(13);
-    doc.setTextColor(13, 148, 136); // Teal
-    doc.text(
-      tipo === 'ISP' 
-        ? 'INFORME SANITARIO OFICIAL: CONTROL DE VENCIMIENTOS (FEFO)' 
-        : tipo === 'MERMAS' 
-        ? 'INFORME DE MEDICAMENTOS DADOS DE BAJA (MERMAS)' 
-        : 'INFORME DE TRAZABILIDAD Y ROTACIÓN DE STOCK',
-      14, 42
-    );
-
-    // Tabla de datos
-    const columnas = ['Código Barra', 'Medicamento', 'N° Lote', 'Ubicación', 'Stock', 'Caducidad', 'Estado'];
-    const filas = mockInventario.map(item => [
-      item.lote?.producto?.codigo_barras || '-',
-      item.lote?.producto?.nombre || '-',
-      item.lote?.numero_lote || '-',
-      item.bodega?.nombre || '-',
-      `${item.stock_actual} un.`,
-      item.lote?.fecha_vencimiento || '-',
-      item.estado_semaforo || '-'
-    ]);
-
-    autoTable(doc, {
-      startY: 48,
-      head: [columnas],
-      body: filas,
-      headStyles: { fillColor: [15, 23, 42] },
-      styles: { fontSize: 8 },
-    });
-
-    // Pie de página de fiscalización
-    const finalY = (doc as any).lastAutoTable?.finalY || 180;
-    doc.setFontSize(9);
-    doc.setTextColor(150);
-    doc.text('Documento oficial generado por SIGAF FarmaVence conforme al Decreto Supremo N° 466 de Farmacias.', 14, finalY + 15);
-
-    doc.save(`SIGAF_Reporte_${tipo}_${new Date().toISOString().slice(0, 10)}.pdf`);
-  };
-
-  const handleSimularExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setCargandoArchivo(true);
-      const nombre = e.target.files[0].name;
-      setTimeout(() => {
-        setCargandoArchivo(false);
-        setArchivoSubido(nombre);
-      }, 1200);
+  const consulta = useConsulta(obtenerOperacion);
+  const { perfilActual, soloLectura } = useRol();
+  const [tipo, setTipo] = useState<TipoInforme>("INVENTARIO");
+  const [empresa, setEmpresa] = useState("");
+  const [sucursal, setSucursal] = useState("");
+  const [bodega, setBodega] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const farmacia = consulta.datos?.farmacias.find(
+    (f) => String(f.id_farmacia) === empresa,
+  );
+  const sucursales =
+    consulta.datos?.sucursales.filter(
+      (s) => s.id_farmacia === Number(empresa),
+    ) ?? [];
+  const ids = new Set(
+    sucursales
+      .filter((s) => !sucursal || s.id_sucursal === Number(sucursal))
+      .map((s) => s.id_sucursal),
+  );
+  const bodegas =
+    consulta.datos?.bodegas.filter((b) => ids.has(b.id_sucursal)) ?? [];
+  async function exportar(formato: "PDF" | "XLS", completo = false) {
+    if (!consulta.datos || !farmacia) return;
+    if (desde && hasta && desde > hasta) {
+      toast.error("La fecha inicial debe ser anterior a la final.");
+      return;
     }
-  };
-
+    setOcupado(true);
+    try {
+      const filtro = {
+        farmacia: farmacia.id_farmacia,
+        sucursal: sucursal ? Number(sucursal) : undefined,
+        bodega: bodega ? Number(bodega) : undefined,
+        desde,
+        hasta,
+      };
+      const filtroTexto =
+        "Sucursal: " +
+        (sucursales.find((s) => String(s.id_sucursal) === sucursal)?.nombre ||
+          "Todas") +
+        " | Bodega: " +
+        (bodegas.find((b) => String(b.id_bodega) === bodega)?.nombre ||
+          "Todas") +
+        " | Fechas: " +
+        (desde || "sin inicio") +
+        " a " +
+        (hasta || "sin fin");
+      const tipos: TipoInforme[] = completo
+        ? ["INVENTARIO", "MERMAS", "ROTACION"]
+        : [tipo];
+      const tablas = tipos.map((t) =>
+        prepararReporte(consulta.datos!, t, filtro),
+      );
+      const nombre =
+        "SIGAF-" +
+        (completo ? "completo" : tipo.toLowerCase()) +
+        "-" +
+        fechaChile();
+      if (!tablas.some((t) => t.filas.length)) {
+        toast.info("No hay registros para los filtros seleccionados.");
+        return;
+      }
+      const pdf =
+        formato === "PDF"
+          ? await crearPDF(
+              tablas[0],
+              farmacia,
+              sucursales.find((s) => String(s.id_sucursal) === sucursal)
+                ?.direccion || "Todas las sucursales",
+              filtroTexto,
+            )
+          : null;
+      const libro =
+        formato === "XLS"
+          ? await crearLibroExcel(tablas, {
+              farmacia: farmacia.razon_social,
+              rut: farmacia.rut,
+              filtros: filtroTexto,
+            })
+          : null;
+      if (!soloLectura)
+        await guardarFila("reporte", {
+          id_usuario: perfilActual.id_usuario,
+          tipo,
+          formato,
+          fecha_generacion: new Date().toISOString(),
+        });
+      if (pdf) pdf.save(nombre + ".pdf");
+      if (libro) {
+        const XLSX = await import("xlsx");
+        XLSX.writeFile(libro, nombre + ".xlsx");
+      }
+      toast.success(
+        soloLectura
+          ? "Informe descargado sin modificar Supabase"
+          : "Informe generado con los registros seleccionados",
+      );
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "No se pudo generar el informe.",
+      );
+    } finally {
+      setOcupado(false);
+    }
+  }
   return (
     <TransicionPagina>
       <Header
-        titulo="Centro de Reportes y Migración de Inventario"
-        subtitulo="Exportación de informes sanitarios para el ISP y carga masiva mediante planilla Excel"
+        titulo="Reportes y auditoría"
+        subtitulo="Inventario, libro de control y bajas. Documentos con identidad de la farmacia."
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Exportación de Informes Sanitarios */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 transition-all duration-200 hover:shadow-md">
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              <FileText className="w-4 h-4 text-teal-600" />
-              Generación de Informes Sanitarios y Auditoría
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Descarga en tiempo real los reportes oficiales en PDF para auditorías del Instituto de Salud Pública (ISP).
+      <EstadoDatos {...consulta} />
+      {consulta.datos && !consulta.cargando && !consulta.error && (
+        <div className="grid gap-5 lg:grid-cols-3">
+          <section className="panel space-y-4 lg:col-span-2">
+            <h2 className="font-semibold">Define el alcance</h2>
+            <label className="block text-sm">
+              Farmacia
+              <select
+                required
+                value={empresa}
+                onChange={(e) => {
+                  setEmpresa(e.target.value);
+                  setSucursal("");
+                  setBodega("");
+                }}
+                className="campo mt-1"
+              >
+                <option value="">Selecciona la farmacia del membrete</option>
+                {consulta.datos.farmacias.map((f) => (
+                  <option key={f.id_farmacia} value={f.id_farmacia}>
+                    {f.razon_social}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-sm">
+                Sucursal
+                <select
+                  value={sucursal}
+                  onChange={(e) => {
+                    setSucursal(e.target.value);
+                    setBodega("");
+                  }}
+                  className="campo mt-1"
+                >
+                  <option value="">Todas las sucursales</option>
+                  {sucursales.map((s) => (
+                    <option key={s.id_sucursal} value={s.id_sucursal}>
+                      {s.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                Bodega
+                <select
+                  value={bodega}
+                  onChange={(e) => setBodega(e.target.value)}
+                  className="campo mt-1"
+                >
+                  <option value="">Todas las bodegas</option>
+                  {bodegas.map((b) => (
+                    <option key={b.id_bodega} value={b.id_bodega}>
+                      {b.nombre}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm">
+                Desde
+                <input
+                  type="date"
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
+                  className="campo mt-1"
+                />
+              </label>
+              <label className="text-sm">
+                Hasta
+                <input
+                  type="date"
+                  value={hasta}
+                  onChange={(e) => setHasta(e.target.value)}
+                  className="campo mt-1"
+                />
+              </label>
+            </div>
+            <p className="text-xs text-muted">
+              En inventario las fechas filtran vencimientos. En mermas y
+              movimientos filtran la fecha de operación.
             </p>
-          </div>
-
-          <div className="space-y-2.5">
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Informe de Vencimientos y Semáforo FEFO
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Clasificación de todos los lotes vigentes, preventivos y críticos.
-                </p>
-              </div>
-              <button
-                onClick={() => exportarReportePDF('ISP')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
+            <label className="block text-sm">
+              Informe
+              <select
+                value={tipo}
+                onChange={(e) => setTipo(e.target.value as TipoInforme)}
+                className="campo mt-1"
               >
-                <Download className="w-3.5 h-3.5" />
-                Descargar PDF
-              </button>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Acta Oficial de Mermas y Destrucción
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Registro de medicamentos caducados retirados de la sala de ventas.
-                </p>
-              </div>
-              <button
-                onClick={() => exportarReportePDF('MERMAS')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Descargar PDF
-              </button>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between transition-all duration-150 hover:-translate-y-0.5">
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Planilla Completa de Inventario (Excel .XLS)
-                </p>
-                <p className="text-[11px] text-slate-400">
-                  Volcado tabular para control interno o contabilidad.
-                </p>
-              </div>
-              <button
-                onClick={() => alert('Generando planilla de cálculo Excel...')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                Exportar XLS
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Carga Masiva Inicial (Importación desde Excel) */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md">
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              <Upload className="w-4 h-4 text-emerald-600" />
-              Carga Masiva de Inventario (Migración desde Excel)
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Si la farmacia manejaba su stock en cuadernos o Excel, sube la planilla para poblar la base de datos automáticamente.
+                <option value="INVENTARIO">Inventario farmacéutico</option>
+                <option value="MERMAS">Mermas y acta de baja</option>
+                <option value="ROTACION">Rotación / libro de control</option>
+              </select>
+            </label>
+          </section>
+          <section className="panel space-y-4">
+            <h2 className="font-semibold">Exportar información</h2>
+            <p className="text-sm text-muted">
+              El PDF incluye membrete, filtros, fecha de emisión, paginación y
+              espacio de firma del Director Técnico.
             </p>
-
-            <div className="mt-5 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-6 text-center hover:border-teal-500 transition-colors cursor-pointer relative bg-slate-50/50 dark:bg-slate-800/20 group">
-              <input
-                type="file"
-                accept=".xlsx, .xls, .csv"
-                onChange={handleSimularExcel}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-              <FileSpreadsheet className="w-10 h-10 text-emerald-500 mx-auto mb-2 transition-transform group-hover:scale-110 duration-200" />
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                Haz clic o arrastra tu archivo Excel (.xlsx / .csv)
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
-                Columnas requeridas: Código de Barra, Nombre, N° Lote, Fecha Vencimiento, Cantidad
-              </p>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {cargandoArchivo && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="p-3 bg-amber-50 text-amber-800 rounded-lg text-xs font-medium animate-pulse mt-4"
-              >
-                ⏳ Analizando archivo y validando fechas de caducidad...
-              </motion.div>
-            )}
-
-            {archivoSubido && !cargandoArchivo && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-3 bg-emerald-50 text-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-2 mt-4"
-              >
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Archivo &ldquo;{archivoSubido}&rdquo; validado con éxito: 150 medicamentos listos para migrar a Supabase.</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <button
+              disabled={!farmacia || ocupado}
+              className="boton-primario w-full justify-center"
+              onClick={() => exportar("PDF")}
+            >
+              <FileDown size={17} />
+              {ocupado ? "Generando…" : "Descargar PDF"}
+            </button>
+            <button
+              disabled={!farmacia || ocupado}
+              className="boton-secundario w-full justify-center"
+              onClick={() => exportar("XLS")}
+            >
+              <FileSpreadsheet size={17} />
+              Descargar Excel
+            </button>
+            <button
+              disabled={!farmacia || ocupado}
+              className="w-full text-sm font-semibold text-acento disabled:opacity-50"
+              onClick={() => exportar("XLS", true)}
+            >
+              Exportar inventario, mermas y movimientos
+            </button>
+            <p className="text-xs text-muted">
+              Revisa y firma los informes antes de presentarlos. La disposición
+              final de mermas se documenta en el acta.
+            </p>
+          </section>
         </div>
-      </div>
+      )}
     </TransicionPagina>
   );
 }

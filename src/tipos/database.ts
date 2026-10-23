@@ -3,14 +3,16 @@
  * Motor: PostgreSQL sobre Supabase
  */
 
-export type EstadoSemaforo = 'VERDE' | 'AMARILLO' | 'ROJO' | 'VENCIDO';
-export type TipoMovimiento = 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'MERMA' | 'TRASLADO';
-export type MotivoMerma = 'VENCIMIENTO' | 'DETERIORO' | 'DEVOLUCION';
-export type TipoNotificacion = 'CADUCIDAD' | 'STOCK' | 'SISTEMA';
-export type EstadoNotificacion = 'ENVIADO' | 'PENDIENTE' | 'ERROR' | 'LEIDO';
-export type TipoReporte = 'MERMAS' | 'ROTACION' | 'INVENTARIO';
-export type FormatoReporte = 'PDF' | 'XLS';
-export type RolPerfil = 'ADMIN' | 'BODEGUERO' | 'AUXILIAR';
+export type EstadoSemaforo =
+  "VERDE" | "AMARILLO" | "NARANJO" | "ROJO" | "VENCIDO";
+export type TipoMovimiento =
+  "ENTRADA" | "SALIDA" | "AJUSTE" | "MERMA" | "TRASLADO";
+export type MotivoMerma = "VENCIMIENTO" | "DETERIORO" | "DEVOLUCION";
+export type TipoNotificacion = "CADUCIDAD" | "STOCK" | "SISTEMA";
+export type EstadoNotificacion = "ENVIADO" | "PENDIENTE" | "ERROR" | "LEIDO";
+export type TipoReporte = "MERMAS" | "ROTACION" | "INVENTARIO";
+export type FormatoReporte = "PDF" | "XLS";
+export type RolPerfil = "ADMIN" | "BODEGUERO" | "AUXILIAR";
 
 export interface Perfil {
   id_perfil: number;
@@ -22,7 +24,6 @@ export interface Usuario {
   id_usuario: string; // UUID
   nombre: string;
   email: string;
-  password_hash?: string;
   id_perfil: number;
   id_sucursal: number | null;
   activo: boolean;
@@ -35,6 +36,8 @@ export interface Farmacia {
   razon_social: string;
   rut: string;
   direccion: string | null;
+  logo_url?: string | null;
+  director_tecnico?: string | null;
 }
 
 export interface Sucursal {
@@ -51,6 +54,7 @@ export interface Bodega {
   ubicacion: string | null;
   id_sucursal: number;
   sucursal?: Sucursal;
+  es_sala_ventas?: boolean;
 }
 
 export interface Categoria {
@@ -67,6 +71,9 @@ export interface Producto {
   unidad_medida: string | null;
   id_categoria: number;
   categoria?: Categoria;
+  principio_activo?: string | null;
+  registro_isp?: string | null;
+  vida_util_meses?: number | null;
 }
 
 export interface Lote {
@@ -76,6 +83,8 @@ export interface Lote {
   fecha_ingreso: string; // DATE (YYYY-MM-DD)
   id_producto: number;
   producto?: Producto;
+  costo_unitario?: number | null;
+  fecha_fabricacion?: string | null;
   // Campos calculados para vista
   dias_restantes?: number;
   estado_semaforo?: EstadoSemaforo;
@@ -101,6 +110,9 @@ export interface MovimientoInventario {
   inventario?: Inventario;
   usuario?: Usuario;
   motivo?: string;
+  cumple_fefo?: boolean | null;
+  costo_unitario?: number | null;
+  id_bodega_destino?: number | null;
 }
 
 export interface Merma {
@@ -112,6 +124,7 @@ export interface Merma {
   fecha_baja: string; // DATE
   inventario?: Inventario;
   usuario?: Usuario;
+  costo_unitario?: number | null;
 }
 
 export interface Notificacion {
@@ -122,7 +135,114 @@ export interface Notificacion {
   fecha_envio: string; // TIMESTAMP
   estado: EstadoNotificacion | string | null;
   lote_afectado?: string;
+  id_lote?: number | null;
+  clave_evento?: string | null;
+  estado_correo?: string | null;
+  error_correo?: string | null;
+  destinatario_email?: string | null;
+  mensaje_correo?: string | null;
+  intentos_correo?: number;
+  proximo_intento?: string | null;
+  correo_id?: string | null;
 }
+
+export interface Configuracion {
+  id: number;
+  dias_critico: number;
+  dias_preventivo: number;
+  holgura_dias: number;
+  /** Metadato de la vista: indica umbrales originales sin tabla configuracion. No es una columna SQL. */
+  esquema_original?: boolean;
+}
+export interface CorreoResumen {
+  id_envio: string;
+  id_usuario: string;
+  destinatario: string;
+  mensajes: Json;
+  ids_notificaciones: number[];
+  estado: string;
+  intentos: number;
+  primer_intento: string | null;
+  disponible: string;
+  error: string | null;
+  correo_id: string | null;
+}
+
+// Relaciones anidadas pertenecen a las vistas de dominio, no a las filas SQL.
+type Fila<T> = Omit<
+  T,
+  | "perfil"
+  | "sucursal"
+  | "farmacia"
+  | "categoria"
+  | "producto"
+  | "lote"
+  | "bodega"
+  | "inventario"
+  | "usuario"
+  | "dias_restantes"
+  | "lote_afectado"
+>;
+type Tabla<T> = {
+  Row: Fila<T>;
+  Insert: Partial<Fila<T>>;
+  Update: Partial<Fila<T>>;
+  Relationships: [];
+};
+export interface Database {
+  public: {
+    Tables: {
+      perfil: Tabla<Perfil>;
+      usuario: Tabla<Usuario>;
+      farmacia: Tabla<Farmacia>;
+      sucursal: Tabla<Sucursal>;
+      bodega: Tabla<Bodega>;
+      categoria: Tabla<Categoria>;
+      producto: Tabla<Producto>;
+      lote: Tabla<Omit<Lote, "estado_semaforo">>;
+      inventario: Tabla<Inventario>;
+      movimiento_inventario: Tabla<MovimientoInventario>;
+      merma: Tabla<Merma>;
+      notificacion: Tabla<Notificacion>;
+      reporte: Tabla<Reporte>;
+      configuracion: Tabla<Configuracion>;
+      correo_resumen: Tabla<CorreoResumen>;
+    };
+    Views: Record<string, never>;
+    Functions: {
+      recibir_lote: { Args: { p_datos: Json }; Returns: number };
+      operar_stock: {
+        Args: {
+          p_inventario: number;
+          p_cantidad: number;
+          p_tipo: string;
+          p_motivo?: string;
+          p_destino?: number;
+          p_operacion: string;
+        };
+        Returns: number;
+      };
+      generar_alertas: { Args: Record<string, never>; Returns: number };
+      reclamar_correos: {
+        Args: Record<string, never>;
+        Returns: CorreoResumen[];
+      };
+      finalizar_correo: {
+        Args: { p_envio: string; p_correo_id?: string; p_error?: string };
+        Returns: undefined;
+      };
+    };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
 export interface Reporte {
   id_reporte: number;

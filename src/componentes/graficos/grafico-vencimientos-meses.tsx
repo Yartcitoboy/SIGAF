@@ -1,117 +1,52 @@
-'use client';
-
-import React, { useState } from 'react';
-import { CalendarClock, TrendingUp } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
-
-export const GraficoVencimientosMeses: React.FC = () => {
-  const [mesSeleccionado, setMesSeleccionado] = useState<number | null>(null);
-  const shouldReduceMotion = useReducedMotion();
-
-  const meses = [
-    { mes: 'Caducados', cantidadLotes: 2, unidades: 55, color: 'bg-red-900', nivel: 'Crítico inmediato' },
-    { mes: 'Oct 2026', cantidadLotes: 1, unidades: 50, color: 'bg-red-500', nivel: 'Riesgo alto (<30d)' },
-    { mes: 'Nov 2026', cantidadLotes: 1, unidades: 75, color: 'bg-amber-400', nivel: 'Preventivo (60d)' },
-    { mes: 'Dic 2026', cantidadLotes: 2, unidades: 210, color: 'bg-amber-400', nivel: 'Preventivo (90d)' },
-    { mes: 'Ene - Mar 27', cantidadLotes: 0, unidades: 0, color: 'bg-emerald-400', nivel: 'Sin vencimientos' },
-    { mes: 'Abr+ 2027', cantidadLotes: 3, unidades: 740, color: 'bg-emerald-500', nivel: 'Stock vigente a largo plazo' },
-  ];
-
-  const maxUnidades = 750;
-
+import type { Inventario } from "@/tipos/database";
+import { fechaChile } from "@/lib/servicios/fechas";
+export function GraficoVencimientosMeses({
+  inventario,
+}: {
+  inventario: Inventario[];
+}) {
+  const hoy = fechaChile();
+  const meses = Array.from({ length: 6 }, (_, n) => {
+    const fecha = new Date(hoy.slice(0, 7) + "-01T12:00:00Z");
+    fecha.setUTCMonth(fecha.getUTCMonth() + n);
+    const mes = fecha.toISOString().slice(0, 7);
+    return {
+      mes,
+      nombre: new Intl.DateTimeFormat("es-CL", {
+        month: "short",
+        timeZone: "UTC",
+      }).format(fecha),
+      unidades: inventario
+        .filter((i) => i.lote?.fecha_vencimiento.startsWith(mes))
+        .reduce((a, i) => a + i.stock_actual, 0),
+    };
+  });
+  const max = Math.max(1, ...meses.map((m) => m.unidades));
   return (
-    <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md">
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <CalendarClock className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-              Proyección Temporal de Vencimientos
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
-            <TrendingUp className="w-3 h-3 text-teal-500" />
-            Unidades por mes
-          </span>
-        </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">
-          Pasa el cursor por las barras para ver el detalle de unidades en riesgo
-        </p>
-      </div>
-
-      {/* Gráfico de Barras Verticales Progresivo con Stagger */}
-      <div className="h-44 flex items-end justify-between gap-3 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800">
-        {meses.map((item, idx) => {
-          const alturaPct = item.unidades === 0 ? 4 : Math.max(12, Math.round((item.unidades / maxUnidades) * 100));
-          const isHovered = mesSeleccionado === idx;
-
-          return (
+    <section className="panel">
+      <h2 className="font-semibold">Próximos vencimientos</h2>
+      <p className="mt-1 text-xs text-muted">
+        Unidades por mes · próximos seis meses
+      </p>
+      <div className="mt-7 flex h-48 items-end gap-3">
+        {meses.map((m) => (
+          <div
+            key={m.mes}
+            className="flex h-full min-w-0 flex-1 flex-col justify-end text-center"
+          >
+            <span className="mb-2 text-xs font-medium">{m.unidades}</span>
             <div
-              key={item.mes}
-              className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer"
-              onMouseEnter={() => setMesSeleccionado(idx)}
-              onMouseLeave={() => setMesSeleccionado(null)}
-            >
-              {/* Valor emergente en hover */}
-              <motion.div
-                initial={false}
-                animate={{
-                  opacity: isHovered ? 1 : 0,
-                  y: isHovered ? -4 : 2,
-                }}
-                transition={{ duration: 0.15 }}
-                className="text-[11px] font-bold mb-1.5 text-slate-900 dark:text-white pointer-events-none"
-              >
-                {item.unidades} un.
-              </motion.div>
-
-              {/* Contenedor de la Barra */}
-              <div className="w-full max-w-[42px] bg-slate-100 dark:bg-slate-800/80 rounded-t-md h-full flex items-end p-0.5">
-                <motion.div
-                  initial={shouldReduceMotion ? { height: `${alturaPct}%` } : { height: 0 }}
-                  animate={{ height: `${alturaPct}%` }}
-                  transition={{
-                    duration: 0.65,
-                    delay: shouldReduceMotion ? 0 : idx * 0.07,
-                    ease: 'easeOut',
-                  }}
-                  className={`w-full rounded-t-sm transition-all duration-200 ${item.color} ${
-                    isHovered ? 'brightness-110 shadow-md scale-x-105' : 'opacity-85'
-                  }`}
-                />
-              </div>
-
-              {/* Etiqueta del mes */}
-              <span className={`text-[10px] mt-2 font-medium text-center truncate w-full transition-colors ${
-                isHovered ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500'
-              }`}>
-                {item.mes}
-              </span>
-            </div>
-          );
-        })}
+              title={m.mes + ": " + m.unidades + " unidades"}
+              className="barra-grafico mx-auto w-full max-w-12 rounded-t-lg"
+              style={{
+                height: (m.unidades / max) * 130 + "px",
+                minHeight: m.unidades ? 4 : 0,
+              }}
+            />
+            <span className="mt-3 text-xs text-muted">{m.nombre}</span>
+          </div>
+        ))}
       </div>
-
-      {/* Detalle del mes seleccionado con transición suave */}
-      <motion.div
-        layout
-        className="mt-4 pt-3 flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 transition-colors"
-      >
-        {mesSeleccionado !== null ? (
-          <>
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
-              {meses[mesSeleccionado].mes}: {meses[mesSeleccionado].cantidadLotes} lotes ({meses[mesSeleccionado].unidades} unidades)
-            </span>
-            <span className="text-[11px] font-medium text-teal-600 dark:text-teal-400">
-              {meses[mesSeleccionado].nivel}
-            </span>
-          </>
-        ) : (
-          <span className="text-slate-400 text-center w-full text-[11px]">
-            💡 Selecciona o pasa el cursor por un mes para ver la recomendación operativa FEFO
-          </span>
-        )}
-      </motion.div>
-    </div>
+    </section>
   );
-};
+}

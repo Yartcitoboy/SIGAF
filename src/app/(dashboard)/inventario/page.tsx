@@ -1,151 +1,114 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Header } from '@/componentes/layout/header';
-import { SemaforoBadge } from '@/componentes/ui/semaforo-badge';
-import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockInventario, mockBodegas } from '@/datos-mock/inventario-data';
-import { Search, Filter, Boxes } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
+"use client";
+import { useState } from "react";
+import { Header } from "@/componentes/layout/header";
+import { EstadoDatos } from "@/componentes/ui/estado-datos";
+import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
+import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
+import { useConsulta } from "@/lib/hooks/use-consulta";
+import { obtenerOperacion } from "@/lib/servicios/operacion";
 export default function InventarioPage() {
-  const [busqueda, setBusqueda] = useState('');
-  const [bodegaFiltro, setBodegaFiltro] = useState<string>('TODAS');
-  const [semaforoFiltro, setSemaforoFiltro] = useState<string>('TODOS');
-
-  const inventarioFiltrado = mockInventario.filter((item) => {
-    const coincideTexto = 
-      item.lote?.producto?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      item.lote?.numero_lote.toLowerCase().includes(busqueda.toLowerCase()) ||
-      item.lote?.producto?.codigo_barras?.includes(busqueda);
-
-    const coincideBodega = bodegaFiltro === 'TODAS' || item.bodega?.id_bodega.toString() === bodegaFiltro;
-    const coincideSemaforo = semaforoFiltro === 'TODOS' || item.estado_semaforo === semaforoFiltro;
-
-    return coincideTexto && coincideBodega && coincideSemaforo;
-  });
-
+  const consulta = useConsulta(obtenerOperacion);
+  const [texto, setTexto] = useState("");
+  const [bodega, setBodega] = useState("");
+  const [estado, setEstado] = useState("");
+  const filas =
+    consulta.datos?.inventario.filter(
+      (i) =>
+        (!bodega || String(i.id_bodega) === bodega) &&
+        (!estado || i.estado_semaforo === estado) &&
+        [
+          i.lote?.producto?.nombre,
+          i.lote?.producto?.codigo_barras,
+          i.lote?.producto?.principio_activo,
+          i.lote?.numero_lote,
+        ].some((v) => v?.toLowerCase().includes(texto.toLowerCase())),
+    ) ?? [];
   return (
     <TransicionPagina>
       <Header
-        titulo="Inventario por Bodega y Semáforo FEFO"
-        subtitulo="Control de existencias físicas cruzadas por lote y ubicación de almacenamiento"
+        titulo="Inventario"
+        subtitulo="Existencias por lote y ubicación. Consulta de stock vigente y caducado."
       />
-
-      {/* Barra de Filtros y Búsqueda */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-wrap gap-3 items-center justify-between transition-all duration-200 hover:shadow-xs">
-        <div className="relative flex-1 min-w-[260px]">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Buscar por medicamento, código de barras o N° lote..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-hidden focus:ring-2 focus:ring-teal-500 transition"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap text-xs">
-          <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-500 font-medium">Bodega:</span>
-            <select
-              value={bodegaFiltro}
-              onChange={(e) => setBodegaFiltro(e.target.value)}
-              className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-teal-500 transition"
-            >
-              <option value="TODAS">Todas las ubicaciones</option>
-              {mockBodegas.map((b) => (
-                <option key={b.id_bodega} value={b.id_bodega.toString()}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500 font-medium">Semáforo:</span>
-            <select
-              value={semaforoFiltro}
-              onChange={(e) => setSemaforoFiltro(e.target.value)}
-              className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-teal-500 transition"
-            >
-              <option value="TODOS">Todos los estados</option>
-              <option value="VERDE">🟢 Vigentes (&gt;90d)</option>
-              <option value="AMARILLO">🟡 Preventivos (30-90d)</option>
-              <option value="ROJO">🔴 Críticos (&lt;30d)</option>
-              <option value="VENCIDO">❌ Caducados (Bloqueados)</option>
-            </select>
-          </div>
-        </div>
+      <div className="panel flex flex-wrap gap-3">
+        <input
+          className="campo flex-1 basis-60"
+          aria-label="Buscar en inventario"
+          placeholder="Nombre, principio activo, código o lote"
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+        />
+        <select
+          aria-label="Bodega"
+          className="campo w-auto!"
+          value={bodega}
+          onChange={(e) => setBodega(e.target.value)}
+        >
+          <option value="">Todas las bodegas</option>
+          {consulta.datos?.bodegas.map((b) => (
+            <option key={b.id_bodega} value={b.id_bodega}>
+              {b.nombre}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Riesgo"
+          className="campo w-auto!"
+          value={estado}
+          onChange={(e) => setEstado(e.target.value)}
+        >
+          <option value="">Todos los estados</option>
+          {["VERDE", "AMARILLO", "NARANJO", "VENCIDO"].map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
       </div>
-
-      {/* Tabla de Inventario */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
-              <tr>
-                <th className="py-3 px-4">Medicamento</th>
-                <th className="py-3 px-4">N° Lote</th>
-                <th className="py-3 px-4">Ubicación / Bodega</th>
-                <th className="py-3 px-4 text-center">Stock Disponible</th>
-                <th className="py-3 px-4">Caducidad</th>
-                <th className="py-3 px-4">Estado FEFO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              <AnimatePresence mode="popLayout">
-                {inventarioFiltrado.length > 0 ? (
-                  inventarioFiltrado.map((item) => (
-                    <motion.tr
-                      key={item.id_inventario}
-                      initial={{ opacity: 0, y: 3 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white">
-                        {item.lote?.producto?.nombre}
-                        <span className="block text-[11px] font-mono text-slate-400 font-normal">
-                          {item.lote?.producto?.codigo_barras}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-medium text-slate-700 dark:text-slate-300">
-                        {item.lote?.numero_lote}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                        {item.bodega?.nombre}
-                        <span className="block text-[10px] text-slate-400">{item.bodega?.ubicacion}</span>
-                      </td>
-                      <td className="py-3 px-4 text-center font-bold text-slate-900 dark:text-white">
-                        {item.stock_actual} un.
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                        {item.lote?.fecha_vencimiento}
-                      </td>
-                      <td className="py-3 px-4">
-                        <SemaforoBadge
-                          estado={item.estado_semaforo}
-                          diasRestantes={item.lote?.dias_restantes}
-                        />
-                      </td>
-                    </motion.tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
-                      <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      No se encontraron productos con los filtros seleccionados
+      <EstadoDatos {...consulta} vacio={!filas.length} />
+      {consulta.datos &&
+        !consulta.cargando &&
+        !consulta.error &&
+        filas.length > 0 && (
+          <div className="panel overflow-x-auto p-0!">
+            <table className="tabla">
+              <thead>
+                <tr>
+                  <th>Medicamento / lote</th>
+                  <th>Ubicación</th>
+                  <th>Stock físico</th>
+                  <th>Vencimiento</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map((i) => (
+                  <tr key={i.id_inventario}>
+                    <td>
+                      <p className="font-medium">{i.lote?.producto?.nombre}</p>
+                      <p className="text-xs text-muted">
+                        {i.lote?.numero_lote} ·{" "}
+                        {i.lote?.producto?.codigo_barras}
+                      </p>
+                    </td>
+                    <td>
+                      {i.bodega?.nombre}
+                      <p className="text-xs text-muted">
+                        {i.bodega?.ubicacion} ·{" "}
+                        {i.bodega?.es_sala_ventas ? "Sala de ventas" : "Bodega"}
+                      </p>
+                    </td>
+                    <td className="font-semibold">{i.stock_actual}</td>
+                    <td>{i.lote?.fecha_vencimiento}</td>
+                    <td>
+                      <SemaforoBadge
+                        estado={i.estado_semaforo}
+                        diasRestantes={i.lote?.dias_restantes}
+                      />
                     </td>
                   </tr>
-                )}
-              </AnimatePresence>
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
     </TransicionPagina>
   );
 }
