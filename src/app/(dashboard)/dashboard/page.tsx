@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { SemaforoBadge } from '@/componentes/ui/semaforo-badge';
 import { ContadorAnimado } from '@/componentes/ui/contador-animado';
@@ -8,11 +8,13 @@ import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
 import { ContenedorEscalonado, TarjetaEscalonada } from '@/componentes/animaciones/contenedor-escalonado';
 import { GraficoDistribucionSemaforo } from '@/componentes/graficos/grafico-distribucion-semaforo';
 import { GraficoVencimientosMeses } from '@/componentes/graficos/grafico-vencimientos-meses';
-import { 
-  mockDashboardKpis, 
-  mockInventario, 
-  mockNotificaciones 
-} from '@/datos-mock/inventario-data';
+import {
+  obtenerInventarioDashboard,
+  obtenerKpis,
+  obtenerNotificacionesRecientes,
+  type DashboardKpis,
+} from '@/lib/servicios/dashboard';
+import type { Inventario, Notificacion } from '@/tipos/database';
 import { 
   Boxes, 
   ShieldAlert, 
@@ -27,11 +29,45 @@ import {
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const KPIS_INICIALES: DashboardKpis = {
+  totalUnidadesStock: 0,
+  totalLotesRegistrados: 0,
+  lotesVencidos: 0,
+  lotesCriticos: 0,
+  lotesAmarillos: 0,
+  lotesVerdes: 0,
+  porcentajeCumplimientoFEFO: 0,
+  alertasActivasSinLeer: 0,
+};
+
 export default function DashboardAdminPage() {
   const [filtroUrgencia, setFiltroUrgencia] = useState<'TODOS' | 'VENCIDOS' | 'AMARILLO'>('TODOS');
 
+  // Datos desde Supabase
+  const [kpis, setKpis] = useState<DashboardKpis>(KPIS_INICIALES);
+  const [inventario, setInventario] = useState<Inventario[]>([]);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+
+  useEffect(() => {
+    async function cargarDatos() {
+      try {
+        const inv = await obtenerInventarioDashboard();
+        const [k, notifs] = await Promise.all([
+          obtenerKpis(inv),
+          obtenerNotificacionesRecientes(),
+        ]);
+        setInventario(inv);
+        setKpis(k);
+        setNotificaciones(notifs);
+      } catch (e) {
+        console.error('Error cargando dashboard:', e);
+      }
+    }
+    cargarDatos();
+  }, []);
+
   // Filtramos los lotes que requieren acción (Rojos o Amarillos)
-  const lotesConAccion = mockInventario.filter((inv) => {
+  const lotesConAccion = inventario.filter((inv) => {
     if (filtroUrgencia === 'VENCIDOS') return inv.estado_semaforo === 'VENCIDO' || inv.estado_semaforo === 'ROJO';
     if (filtroUrgencia === 'AMARILLO') return inv.estado_semaforo === 'AMARILLO';
     return inv.estado_semaforo !== 'VERDE';
@@ -51,10 +87,10 @@ export default function DashboardAdminPage() {
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Stock Total Físico</p>
             <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-              <ContadorAnimado valor={mockDashboardKpis.totalUnidadesStock} sufijo=" un." />
+              <ContadorAnimado valor={kpis.totalUnidadesStock} sufijo=" un." />
             </p>
             <p className="text-[11px] text-slate-400 mt-1">
-              Distribuido en {mockDashboardKpis.totalLotesRegistrados} lotes
+              Distribuido en {kpis.totalLotesRegistrados} lotes
             </p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300">
@@ -70,7 +106,7 @@ export default function DashboardAdminPage() {
               Caducados (Bloqueados)
             </p>
             <p className="text-2xl font-black text-red-700 dark:text-red-400 mt-1">
-              <ContadorAnimado valor={mockDashboardKpis.lotesVencidos} sufijo=" lotes" />
+              <ContadorAnimado valor={kpis.lotesVencidos} sufijo=" lotes" />
             </p>
             <p className="text-[11px] text-red-600/80 font-medium mt-1">
               Venta prohibida · Retiro urgente
@@ -86,7 +122,7 @@ export default function DashboardAdminPage() {
           <div>
             <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">Próximos a Vencer (30-90d)</p>
             <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
-              <ContadorAnimado valor={mockDashboardKpis.lotesAmarillos + mockDashboardKpis.lotesCriticos} sufijo=" lotes" />
+              <ContadorAnimado valor={kpis.lotesAmarillos + kpis.lotesCriticos} sufijo=" lotes" />
             </p>
             <p className="text-[11px] text-amber-700/80 mt-1">
               Prioridad FEFO de dispensación
@@ -102,7 +138,7 @@ export default function DashboardAdminPage() {
           <div>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Cumplimiento FEFO</p>
             <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-              <ContadorAnimado valor={mockDashboardKpis.porcentajeCumplimientoFEFO} decimales={1} sufijo="%" />
+              <ContadorAnimado valor={kpis.porcentajeCumplimientoFEFO} decimales={1} sufijo="%" />
             </p>
             <p className="text-[11px] text-emerald-600/80 mt-1 flex items-center gap-1 font-medium">
               <TrendingUp className="w-3 h-3" /> 0% caducados entregados
@@ -143,7 +179,7 @@ export default function DashboardAdminPage() {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              Todos ({mockInventario.filter(i => i.estado_semaforo !== 'VERDE').length})
+              Todos ({inventario.filter(i => i.estado_semaforo !== 'VERDE').length})
             </button>
             <button
               onClick={() => setFiltroUrgencia('VENCIDOS')}
@@ -269,7 +305,7 @@ export default function DashboardAdminPage() {
         </div>
 
         <div className="space-y-2">
-          {mockNotificaciones.slice(0, 3).map((notif) => (
+          {notificaciones.map((notif) => (
             <motion.div
               key={notif.id_notificacion}
               whileHover={{ x: 2, transition: { duration: 0.15 } }}

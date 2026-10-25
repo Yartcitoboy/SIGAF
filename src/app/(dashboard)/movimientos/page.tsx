@@ -1,14 +1,100 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockMovimientos, mockSucursales } from '@/datos-mock/inventario-data';
-import { Truck, Trash2, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import {
+  obtenerMovimientos,
+  obtenerSucursales,
+  obtenerInventarioDisponible,
+  registrarMovimiento,
+} from '@/lib/servicios/movimientos';
+import type { MovimientoInventario, Sucursal } from '@/tipos/database';
+import { Truck, Trash2, ArrowUpRight, ArrowDownLeft, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const USUARIO_DEMO = '00000000-0000-0000-0000-000000000001';
+
+interface ItemInventario {
+  id_inventario: number;
+  stock_actual: number;
+  lote?: { numero_lote?: string; producto?: { nombre?: string } };
+}
 
 export default function MovimientosPage() {
   const [modalAbierto, setModalAbierto] = useState<'TRASLADO' | 'MERMA' | null>(null);
+
+  // Datos desde Supabase
+  const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
+  const [sucursales, setSucursales] = useState<Sucursal[]>([]);
+  const [inventarioDisp, setInventarioDisp] = useState<ItemInventario[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Formulario del modal
+  const [idInventarioSel, setIdInventarioSel] = useState<number | ''>('');
+  const [cantidad, setCantidad] = useState(1);
+  const [motivo, setMotivo] = useState('VENCIMIENTO');
+  const [guardando, setGuardando] = useState(false);
+
+  const recargarMovimientos = async () => {
+    const [movs, inv] = await Promise.all([
+      obtenerMovimientos(),
+      obtenerInventarioDisponible(),
+    ]);
+    setMovimientos(movs);
+    setInventarioDisp(inv as ItemInventario[]);
+  };
+
+  useEffect(() => {
+    async function cargarDatos() {
+      try {
+        const [movs, sucs, inv] = await Promise.all([
+          obtenerMovimientos(),
+          obtenerSucursales(),
+          obtenerInventarioDisponible(),
+        ]);
+        setMovimientos(movs);
+        setSucursales(sucs);
+        setInventarioDisp(inv as ItemInventario[]);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargarDatos();
+  }, []);
+
+  const abrirModal = (tipo: 'TRASLADO' | 'MERMA') => {
+    setModalAbierto(tipo);
+    setIdInventarioSel(inventarioDisp[0]?.id_inventario ?? '');
+    setCantidad(1);
+    setMotivo('VENCIMIENTO');
+  };
+
+  const confirmarMovimiento = async () => {
+    if (idInventarioSel === '') return;
+    const item = inventarioDisp.find((i) => i.id_inventario === idInventarioSel);
+    if (!item) return;
+    setGuardando(true);
+    try {
+      await registrarMovimiento({
+        id_inventario: Number(idInventarioSel),
+        tipo: modalAbierto as 'TRASLADO' | 'MERMA',
+        cantidad,
+        stockActual: item.stock_actual,
+        id_usuario: USUARIO_DEMO,
+        motivo: modalAbierto === 'MERMA' ? motivo : undefined,
+      });
+      await recargarMovimientos();
+      setModalAbierto(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   return (
     <TransicionPagina>
@@ -19,14 +105,14 @@ export default function MovimientosPage() {
         />
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setModalAbierto('TRASLADO')}
+            onClick={() => abrirModal('TRASLADO')}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
           >
             <Truck className="w-4 h-4" />
             Solicitar Traslado
           </button>
           <button
-            onClick={() => setModalAbierto('MERMA')}
+            onClick={() => abrirModal('MERMA')}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-700 active:scale-95 text-white text-xs font-semibold shadow-xs transition-all duration-150"
           >
             <Trash2 className="w-4 h-4" />
@@ -79,7 +165,28 @@ export default function MovimientosPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {mockMovimientos.map((mov) => {
+              {cargando && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    Cargando movimientos desde la base de datos...
+                  </td>
+                </tr>
+              )}
+              {error && !cargando && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-red-500 text-xs">
+                    Error al cargar datos: {error}
+                  </td>
+                </tr>
+              )}
+              {!cargando && !error && movimientos.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                    No hay movimientos registrados.
+                  </td>
+                </tr>
+              )}
+              {movimientos.map((mov) => {
                 const getBadge = () => {
                   switch (mov.tipo_movimiento) {
                     case 'ENTRADA':
@@ -122,10 +229,10 @@ export default function MovimientosPage() {
                       {mov.cantidad} un.
                     </td>
                     <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
-                      {mov.motivo}
+                      {mov.motivo ?? '—'}
                     </td>
                     <td className="py-3 px-4 text-slate-500">
-                      Carlos Carrasco (Admin)
+                      {mov.usuario?.nombre ?? 'Sin asignar'}
                     </td>
                   </tr>
                 );
@@ -164,10 +271,16 @@ export default function MovimientosPage() {
               <div className="space-y-3 text-xs">
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Lote a Afectar</label>
-                  <select className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500">
-                    <option>Paracetamol 500mg (L-2023-V99) - Caducado</option>
-                    <option>Losartán 50mg (L-2024-LOS77) - 28 días restantes</option>
-                    <option>Ibuprofeno 400mg (L-2025-IBU88) - 65 días restantes</option>
+                  <select
+                    value={idInventarioSel}
+                    onChange={(e) => setIdInventarioSel(Number(e.target.value))}
+                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500"
+                  >
+                    {inventarioDisp.map((i) => (
+                      <option key={i.id_inventario} value={i.id_inventario}>
+                        {i.lote?.producto?.nombre} ({i.lote?.numero_lote}) - Stock: {i.stock_actual}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -175,7 +288,7 @@ export default function MovimientosPage() {
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Sucursal de Destino</label>
                     <select className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500">
-                      {mockSucursales.map(s => (
+                      {sucursales.map(s => (
                         <option key={s.id_sucursal}>{s.nombre}</option>
                       ))}
                     </select>
@@ -183,37 +296,47 @@ export default function MovimientosPage() {
                 ) : (
                   <div>
                     <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Motivo de la Baja</label>
-                    <select className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500">
-                      <option>Fecha de caducidad vencida (ISP)</option>
-                      <option>Deterioro físico o rotura de envase</option>
-                      <option>Devolución rechazada por proveedor</option>
+                    <select
+                      value={motivo}
+                      onChange={(e) => setMotivo(e.target.value)}
+                      className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="VENCIMIENTO">Fecha de caducidad vencida (ISP)</option>
+                      <option value="DETERIORO">Deterioro físico o rotura de envase</option>
+                      <option value="DEVOLUCION">Devolución rechazada por proveedor</option>
                     </select>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-slate-700 dark:text-slate-300 font-medium mb-1">Cantidad de unidades</label>
-                  <input type="number" defaultValue={10} className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500" />
+                  <input
+                    type="number"
+                    min={1}
+                    value={cantidad}
+                    onChange={(e) => setCantidad(Number(e.target.value))}
+                    className="w-full p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-teal-500"
+                  />
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => setModalAbierto(null)}
-                  className="px-3.5 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-medium transition"
+                  disabled={guardando}
+                  className="px-3.5 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 text-xs font-medium transition disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
-                  onClick={() => {
-                    alert('Operación registrada exitosamente');
-                    setModalAbierto(null);
-                  }}
-                  className={`px-4 py-1.5 rounded-lg text-white text-xs font-semibold shadow-xs active:scale-95 transition-transform ${
+                  onClick={confirmarMovimiento}
+                  disabled={guardando || idInventarioSel === ''}
+                  className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-white text-xs font-semibold shadow-xs active:scale-95 transition-transform disabled:opacity-60 ${
                     modalAbierto === 'TRASLADO' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-red-600 hover:bg-red-700'
                   }`}
                 >
-                  Confirmar Registro
+                  {guardando && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {guardando ? 'Registrando...' : 'Confirmar Registro'}
                 </button>
               </div>
             </motion.div>

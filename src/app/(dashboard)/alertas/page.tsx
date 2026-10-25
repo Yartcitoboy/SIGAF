@@ -1,19 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockNotificaciones } from '@/datos-mock/inventario-data';
+import { obtenerNotificaciones, marcarNotificacionLeida } from '@/lib/servicios/notificaciones';
+import type { Notificacion } from '@/tipos/database';
 import { Check, Clock, Mail, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AlertasPage() {
-  const [notificaciones, setNotificaciones] = useState(mockNotificaciones);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const marcarComoLeida = (id: number) => {
-    setNotificaciones(prev =>
-      prev.map(n => n.id_notificacion === id ? { ...n, estado: 'LEIDO' } : n)
-    );
+  useEffect(() => {
+    async function cargarDatos() {
+      try {
+        const data = await obtenerNotificaciones();
+        setNotificaciones(data);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargarDatos();
+  }, []);
+
+  const marcarComoLeida = async (id: number) => {
+    try {
+      await marcarNotificacionLeida(id);
+      setNotificaciones(prev =>
+        prev.map(n => n.id_notificacion === id ? { ...n, estado: 'LEIDO' } : n)
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   return (
@@ -43,6 +65,15 @@ export default function AlertasPage() {
 
       {/* Lista de Notificaciones */}
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs divide-y divide-slate-100 dark:divide-slate-800 transition-all duration-200 hover:shadow-md">
+        {cargando && (
+          <div className="p-8 text-center text-slate-400 text-xs">Cargando alertas desde la base de datos...</div>
+        )}
+        {error && !cargando && (
+          <div className="p-8 text-center text-red-500 text-xs">Error al cargar datos: {error}</div>
+        )}
+        {!cargando && !error && notificaciones.length === 0 && (
+          <div className="p-8 text-center text-slate-400 text-xs">No hay alertas registradas.</div>
+        )}
         <AnimatePresence>
           {notificaciones.map((notif) => {
             const esCritica = notif.mensaje?.includes('VENCIDO') || notif.mensaje?.includes('CRÍTICO');

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '@/componentes/layout/header';
 import { SemaforoBadge } from '@/componentes/ui/semaforo-badge';
 import { TransicionPagina } from '@/componentes/animaciones/transicion-pagina';
-import { mockInventario, mockBodegas } from '@/datos-mock/inventario-data';
+import { obtenerInventario, obtenerBodegas } from '@/lib/servicios/inventario';
+import type { Inventario, Bodega } from '@/tipos/database';
 import { Search, Filter, Boxes } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,7 +14,31 @@ export default function InventarioPage() {
   const [bodegaFiltro, setBodegaFiltro] = useState<string>('TODAS');
   const [semaforoFiltro, setSemaforoFiltro] = useState<string>('TODOS');
 
-  const inventarioFiltrado = mockInventario.filter((item) => {
+  // Datos desde Supabase
+  const [inventario, setInventario] = useState<Inventario[]>([]);
+  const [bodegas, setBodegas] = useState<Bodega[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function cargarDatos() {
+      try {
+        const [inv, bods] = await Promise.all([
+          obtenerInventario(),
+          obtenerBodegas(),
+        ]);
+        setInventario(inv);
+        setBodegas(bods);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setCargando(false);
+      }
+    }
+    cargarDatos();
+  }, []);
+
+  const inventarioFiltrado = inventario.filter((item) => {
     const coincideTexto = 
       item.lote?.producto?.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.lote?.numero_lote.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -55,7 +80,7 @@ export default function InventarioPage() {
               className="py-1.5 px-2.5 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs focus:ring-2 focus:ring-teal-500 transition"
             >
               <option value="TODAS">Todas las ubicaciones</option>
-              {mockBodegas.map((b) => (
+              {bodegas.map((b) => (
                 <option key={b.id_bodega} value={b.id_bodega.toString()}>
                   {b.nombre}
                 </option>
@@ -95,8 +120,22 @@ export default function InventarioPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {cargando && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                    Cargando inventario desde la base de datos...
+                  </td>
+                </tr>
+              )}
+              {error && !cargando && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-red-500 text-xs">
+                    Error al cargar datos: {error}
+                  </td>
+                </tr>
+              )}
               <AnimatePresence mode="popLayout">
-                {inventarioFiltrado.length > 0 ? (
+                {!cargando && !error && inventarioFiltrado.length > 0 ? (
                   inventarioFiltrado.map((item) => (
                     <motion.tr
                       key={item.id_inventario}
@@ -134,12 +173,14 @@ export default function InventarioPage() {
                     </motion.tr>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
-                      <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      No se encontraron productos con los filtros seleccionados
-                    </td>
-                  </tr>
+                  !cargando && !error && (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        No se encontraron productos con los filtros seleccionados
+                      </td>
+                    </tr>
+                  )
                 )}
               </AnimatePresence>
             </tbody>

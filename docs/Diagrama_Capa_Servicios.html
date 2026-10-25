@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capa de Servicios - SIGAF</title>
+<style>
+    :root{
+        --pres:#2f80ed; --pres-bg:#e8f1fe;
+        --neg:#7b61ff;  --neg-bg:#f0ecfe;
+        --dat:#1fa971;  --dat-bg:#e6f6ef;
+        --db:#e08c00;   --db-bg:#fdf3e2;
+        --ink:#263238;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#eef2f8;color:var(--ink);padding:28px 20px;}
+    .container{max-width:1200px;margin:0 auto;}
+    header{text-align:center;margin-bottom:24px;}
+    .badge{display:inline-block;background:linear-gradient(135deg,#1fa971,#2f80ed);color:#fff;font-size:0.68rem;font-weight:800;letter-spacing:2px;padding:5px 15px;border-radius:20px;margin-bottom:10px;text-transform:uppercase;}
+    h1{font-size:1.8rem;color:#12325f;}
+    .subtitle{color:#5b6b7f;font-size:0.92rem;margin-top:5px;}
+
+    .leyenda{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:18px 0 26px;font-size:0.82rem;}
+    .leyenda span{display:flex;align-items:center;gap:7px;}
+    .dot{width:12px;height:12px;border-radius:4px;}
+
+    /* capa */
+    .capa{border-radius:14px;border:1.5px solid;margin-bottom:8px;overflow:hidden;}
+    .capa-head{padding:10px 16px;color:#fff;display:flex;align-items:center;gap:10px;}
+    .capa-head .n{font-weight:800;font-size:1rem;}
+    .capa-head .t{font-size:0.75rem;opacity:0.9;margin-left:auto;font-style:italic;}
+    .capa-desc{padding:10px 16px 0;font-size:0.82rem;color:#475569;line-height:1.5;}
+    .capa-desc b{color:#263238;}
+    .capa-body{padding:14px;display:grid;gap:10px;}
+    .grid5{grid-template-columns:repeat(5,1fr);}
+    .box{background:#fff;border:1.4px solid;border-radius:9px;padding:9px 10px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.05);}
+    .box .nm{font-weight:700;font-size:0.78rem;}
+    .box .fl{font-size:0.62rem;color:#7a8aa0;font-family:monospace;margin-top:2px;}
+
+    .c-pres{border-color:var(--pres);background:var(--pres-bg);}
+    .c-pres .capa-head{background:var(--pres);}
+    .c-pres .box{border-color:var(--pres);}
+    .c-neg{border-color:var(--neg);background:var(--neg-bg);}
+    .c-neg .capa-head{background:var(--neg);}
+    .c-neg .box{border-color:var(--neg);}
+    .c-dat{border-color:var(--dat);background:var(--dat-bg);}
+    .c-dat .capa-head{background:var(--dat);}
+    .c-dat .box{border-color:var(--dat);}
+    .c-db{border-color:var(--db);background:var(--db-bg);}
+    .c-db .capa-head{background:var(--db);}
+    .c-db .box{border-color:var(--db);}
+
+    .flecha{text-align:center;padding:4px 0;color:#7a8aa0;font-size:0.76rem;}
+    .flecha .a{font-size:1.4rem;line-height:1;display:block;color:#64748b;}
+    .flecha .l{background:#fff;border:1px solid #dbe3ee;border-radius:20px;padding:2px 12px;display:inline-block;margin-top:2px;}
+
+    .nota{background:#fff;border:1px solid #dbe3ee;border-radius:12px;padding:16px 20px;margin-top:26px;}
+    .nota h3{color:#12325f;font-size:1rem;margin-bottom:8px;}
+    .nota ul{list-style:none;}
+    .nota li{font-size:0.86rem;color:#475569;padding:4px 0 4px 20px;position:relative;}
+    .nota li::before{content:"▸";position:absolute;left:0;color:#2f80ed;}
+    code{background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:0.8rem;color:#7c3aed;}
+
+    .ejemplo{background:#0f2947;color:#dbe7f5;border-radius:12px;padding:18px 20px;margin-top:18px;font-size:0.84rem;}
+    .ejemplo h3{color:#7dd3fc;margin-bottom:10px;font-size:1rem;}
+    .ejemplo .paso{padding:5px 0;display:flex;gap:10px;align-items:flex-start;}
+    .ejemplo .num{background:#1fa971;color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;}
+    .ejemplo code{background:rgba(255,255,255,0.1);color:#9ae6b4;}
+
+    footer{text-align:center;margin-top:26px;color:#8a97a8;font-size:0.8rem;}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="badge">SIGAF · Integración Frontend ↔ Supabase</div>
+        <h1>Capa de Servicios Implementada</h1>
+        <p class="subtitle">Cómo quedó la conexión del frontend con la base de datos, respetando la arquitectura en capas</p>
+    </header>
+
+    <div class="leyenda">
+        <span><span class="dot" style="background:#2f80ed"></span> Presentación (páginas)</span>
+        <span><span class="dot" style="background:#7b61ff"></span> Servicios (lógica/negocio)</span>
+        <span><span class="dot" style="background:#1fa971"></span> Cliente de datos</span>
+        <span><span class="dot" style="background:#e08c00"></span> Base de datos</span>
+    </div>
+
+    <!-- PRESENTACIÓN -->
+    <div class="capa c-pres">
+        <div class="capa-head"><span class="n">🖥️ Capa de Presentación</span><span class="t">src/app/(dashboard)/*/page.tsx · React + TypeScript</span></div>
+        <div class="capa-desc">Es <b>lo que ve y usa el usuario</b>: las pantallas con sus tablas, formularios, filtros y botones. Su única tarea es mostrar la información y capturar las acciones del usuario. No contiene lógica de negocio ni accede a la base de datos.</div>
+        <div class="capa-body grid5">
+            <div class="box"><div class="nm">Login</div><div class="fl">login/page.tsx</div></div>
+            <div class="box"><div class="nm">Dashboard</div><div class="fl">dashboard/page.tsx</div></div>
+            <div class="box"><div class="nm">Inventario</div><div class="fl">inventario/page.tsx</div></div>
+            <div class="box"><div class="nm">Productos</div><div class="fl">productos/page.tsx</div></div>
+            <div class="box"><div class="nm">Lotes</div><div class="fl">lotes/page.tsx</div></div>
+            <div class="box"><div class="nm">Movimientos</div><div class="fl">movimientos/page.tsx</div></div>
+            <div class="box"><div class="nm">Alertas</div><div class="fl">alertas/page.tsx</div></div>
+            <div class="box"><div class="nm">Usuarios</div><div class="fl">usuarios/page.tsx</div></div>
+            <div class="box"><div class="nm">Reportes</div><div class="fl">reportes/page.tsx</div></div>
+            <div class="box"><div class="nm">Configuración</div><div class="fl">configuracion/page.tsx</div></div>
+        </div>
+    </div>
+
+    <div class="flecha"><span class="a">↓</span><span class="l">la página llama al servicio (nunca a Supabase directo)</span></div>
+
+    <!-- SERVICIOS -->
+    <div class="capa c-neg">
+        <div class="capa-head"><span class="n">⚡ Capa de Servicios (Lógica de Negocio)</span><span class="t">src/lib/servicios/*.ts · TypeScript</span></div>
+        <div class="capa-desc">Es <b>el cerebro de la aplicación</b>. Contiene las reglas del negocio: arma las consultas, calcula el semáforo de caducidad, aplica el método FEFO y procesa los datos antes de entregarlos a la pantalla. Es el intermediario entre lo que ve el usuario y la base de datos.</div>
+        <div class="capa-body grid5">
+            <div class="box"><div class="nm">AuthService</div><div class="fl">auth.ts</div></div>
+            <div class="box"><div class="nm">DashboardService</div><div class="fl">dashboard.ts</div></div>
+            <div class="box"><div class="nm">InventarioService</div><div class="fl">inventario.ts</div></div>
+            <div class="box"><div class="nm">ProductoService</div><div class="fl">productos.ts</div></div>
+            <div class="box"><div class="nm">LoteService</div><div class="fl">lotes.ts</div></div>
+            <div class="box"><div class="nm">MovimientoService</div><div class="fl">movimientos.ts</div></div>
+            <div class="box"><div class="nm">NotificacionService</div><div class="fl">notificaciones.ts</div></div>
+            <div class="box"><div class="nm">UsuarioService</div><div class="fl">usuarios.ts</div></div>
+            <div class="box"><div class="nm">ReporteService</div><div class="fl">reportes.ts</div></div>
+            <div class="box"><div class="nm">ConfiguracionService</div><div class="fl">configuracion.ts</div></div>
+        </div>
+    </div>
+
+    <div class="flecha"><span class="a">↓</span><span class="l">el servicio usa el cliente supabase-js</span></div>
+
+    <!-- CLIENTE DE DATOS -->
+    <div class="capa c-dat">
+        <div class="capa-head"><span class="n">🔌 Cliente de Acceso a Datos</span><span class="t">src/lib/supabase/ · supabase-js</span></div>
+        <div class="capa-desc">Es <b>la conexión con la base de datos</b>. Es un punto único que sabe cómo comunicarse con Supabase de forma segura (usando las credenciales). Los servicios lo usan para enviar y recibir datos, sin preocuparse de los detalles técnicos de la conexión.</div>
+        <div class="capa-body" style="grid-template-columns:repeat(2,1fr);">
+            <div class="box"><div class="nm">createClient() — navegador</div><div class="fl">client.ts</div></div>
+            <div class="box"><div class="nm">createClient() — servidor</div><div class="fl">server.ts</div></div>
+        </div>
+    </div>
+
+    <div class="flecha"><span class="a">↓</span><span class="l">consultas vía API REST / HTTPS</span></div>
+
+    <!-- BASE DE DATOS -->
+    <div class="capa c-db">
+        <div class="capa-head"><span class="n">🗄️ Base de Datos</span><span class="t">Supabase · PostgreSQL · 13 tablas</span></div>
+        <div class="capa-desc">Es <b>donde se guarda toda la información</b> de forma permanente: usuarios, productos, lotes, inventario, movimientos, etc. Está alojada en Supabase (PostgreSQL en la nube) y es la fuente de verdad de todo el sistema.</div>
+        <div class="capa-body grid5">
+            <div class="box"><div class="nm">usuario</div></div>
+            <div class="box"><div class="nm">perfil</div></div>
+            <div class="box"><div class="nm">farmacia</div></div>
+            <div class="box"><div class="nm">sucursal</div></div>
+            <div class="box"><div class="nm">bodega</div></div>
+            <div class="box"><div class="nm">categoria</div></div>
+            <div class="box"><div class="nm">producto</div></div>
+            <div class="box"><div class="nm">lote</div></div>
+            <div class="box"><div class="nm">inventario</div></div>
+            <div class="box"><div class="nm">movimiento_inventario</div></div>
+            <div class="box"><div class="nm">merma</div></div>
+            <div class="box"><div class="nm">notificacion</div></div>
+            <div class="box"><div class="nm">reporte</div></div>
+        </div>
+    </div>
+
+    <!-- EJEMPLO DE FLUJO -->
+    <div class="ejemplo">
+        <h3>Ejemplo de flujo: pantalla de Inventario</h3>
+        <div class="paso"><span class="num">1</span><div>La página <code>inventario/page.tsx</code> llama a <code>obtenerInventario()</code></div></div>
+        <div class="paso"><span class="num">2</span><div>El servicio <code>inventario.ts</code> arma la consulta y usa el cliente <code>supabase</code></div></div>
+        <div class="paso"><span class="num">3</span><div>El cliente consulta las tablas <code>inventario</code>, <code>lote</code>, <code>producto</code> y <code>bodega</code> vía REST</div></div>
+        <div class="paso"><span class="num">4</span><div>El servicio calcula el semáforo (días a vencer) y devuelve los datos listos a la página</div></div>
+        <div class="paso"><span class="num">5</span><div>La página solo muestra los datos. No conoce ni toca Supabase directamente.</div></div>
+    </div>
+
+    <!-- NOTA -->
+    <div class="nota">
+        <h3>Por qué esta estructura cumple la arquitectura en capas</h3>
+        <ul>
+            <li><b>Separación de responsabilidades:</b> la presentación muestra, el servicio contiene la lógica, el cliente accede a los datos.</li>
+            <li><b>Regla clave:</b> ninguna página (<code>page.tsx</code>) usa Supabase directamente; siempre pasa por un servicio.</li>
+            <li><b>Mantenibilidad:</b> si cambia la base de datos, solo se ajustan los servicios, no las páginas.</li>
+            <li><b>Programación orientada a objetos:</b> los servicios encapsulan la lógica en TypeScript (cumple el requisito del capstone).</li>
+            <li><b>Estado actual:</b> los 10 módulos están conectados en modo lectura. Pendiente: operaciones de escritura (crear/editar) y RLS.</li>
+        </ul>
+    </div>
+
+    <footer>
+        SIGAF — Capa de Servicios · Integración Frontend ↔ Supabase · Proyecto APT Capstone
+    </footer>
+</div>
+</body>
+</html>

@@ -17,7 +17,12 @@ import {
   ShieldCheck,
   Building2
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { LogOut } from 'lucide-react';
 import { mockDashboardKpis } from '@/datos-mock/inventario-data';
+import { logout, obtenerUsuarioSesion } from '@/lib/servicios/auth';
+import type { Usuario } from '@/tipos/database';
 
 interface NavItem {
   nombre: string;
@@ -92,6 +97,22 @@ const modulosNavegacion: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const shouldReduceMotion = useReducedMotion();
+  const router = useRouter();
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+  useEffect(() => {
+    setUsuario(obtenerUsuarioSesion());
+  }, []);
+
+  const manejarLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
+  // Iniciales del nombre para el avatar
+  const iniciales = usuario?.nombre
+    ? usuario.nombre.split(' ').slice(0, 2).map((p) => p.charAt(0)).join('').toUpperCase()
+    : 'US';
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800 shrink-0 sticky top-0 z-30">
@@ -176,20 +197,30 @@ export const Sidebar: React.FC = () => {
         })}
       </nav>
 
-      {/* Footer del Sidebar: Perfil del Usuario Administrador */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/40">
+      {/* Footer del Sidebar: Perfil del Usuario + Cerrar Sesión */}
+      <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-sm text-teal-400">
-            CC
+            {iniciales}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-200 truncate">Carlos Carrasco</p>
+            <p className="text-xs font-semibold text-slate-200 truncate">
+              {usuario?.nombre ?? 'Invitado'}
+            </p>
             <div className="flex items-center gap-1 text-[10px] text-teal-400 font-medium">
               <ShieldCheck className="w-3 h-3" />
-              <span>ADMINISTRADOR</span>
+              <span>{usuario?.perfil?.nombre ?? 'SIN SESIÓN'}</span>
             </div>
           </div>
         </div>
+
+        <button
+          onClick={manejarLogout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800 hover:bg-red-600/90 text-slate-300 hover:text-white text-xs font-semibold transition-colors duration-150 border border-slate-700 hover:border-red-500"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Cerrar sesión
+        </button>
       </div>
     </aside>
   );
