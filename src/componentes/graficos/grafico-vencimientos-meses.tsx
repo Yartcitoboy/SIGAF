@@ -4,20 +4,50 @@ import React, { useState } from 'react';
 import { CalendarClock, TrendingUp } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 
-export const GraficoVencimientosMeses: React.FC = () => {
+interface ItemInv {
+  stock_actual: number;
+  estado_semaforo?: string | null;
+  lote?: { fecha_vencimiento?: string } | null;
+}
+
+interface Props {
+  inventario?: ItemInv[];
+}
+
+const NOMBRE_MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+export const GraficoVencimientosMeses: React.FC<Props> = ({ inventario = [] }) => {
   const [mesSeleccionado, setMesSeleccionado] = useState<number | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
-  const meses = [
-    { mes: 'Caducados', cantidadLotes: 2, unidades: 55, color: 'bg-red-900', nivel: 'Crítico inmediato' },
-    { mes: 'Oct 2026', cantidadLotes: 1, unidades: 50, color: 'bg-red-500', nivel: 'Riesgo alto (<30d)' },
-    { mes: 'Nov 2026', cantidadLotes: 1, unidades: 75, color: 'bg-amber-400', nivel: 'Preventivo (60d)' },
-    { mes: 'Dic 2026', cantidadLotes: 2, unidades: 210, color: 'bg-amber-400', nivel: 'Preventivo (90d)' },
-    { mes: 'Ene - Mar 27', cantidadLotes: 0, unidades: 0, color: 'bg-emerald-400', nivel: 'Sin vencimientos' },
-    { mes: 'Abr+ 2027', cantidadLotes: 3, unidades: 740, color: 'bg-emerald-500', nivel: 'Stock vigente a largo plazo' },
-  ];
+  // Agrupar el inventario real por mes de vencimiento
+  const agrupado = new Map<string, { cantidadLotes: number; unidades: number; vencido: boolean; orden: number }>();
 
-  const maxUnidades = 750;
+  inventario.forEach((item) => {
+    if (!item.lote?.fecha_vencimiento) return;
+    const f = new Date(item.lote.fecha_vencimiento);
+    const esVencido = item.estado_semaforo === 'VENCIDO';
+    const clave = esVencido ? 'Caducados' : `${NOMBRE_MES[f.getMonth()]} ${f.getFullYear()}`;
+    const orden = esVencido ? 0 : f.getFullYear() * 12 + f.getMonth() + 1;
+    const actual = agrupado.get(clave) ?? { cantidadLotes: 0, unidades: 0, vencido: esVencido, orden };
+    actual.cantidadLotes += 1;
+    actual.unidades += item.stock_actual ?? 0;
+    agrupado.set(clave, actual);
+  });
+
+  const meses = Array.from(agrupado.entries())
+    .map(([mes, v]) => {
+      let color = 'bg-emerald-500';
+      let nivel = 'Stock vigente';
+      if (v.vencido) { color = 'bg-red-900'; nivel = 'Crítico inmediato'; }
+      else if (v.orden <= 1) { color = 'bg-red-500'; nivel = 'Riesgo alto'; }
+      else if (v.orden <= 3) { color = 'bg-amber-400'; nivel = 'Preventivo'; }
+      return { mes, cantidadLotes: v.cantidadLotes, unidades: v.unidades, color, nivel, orden: v.orden };
+    })
+    .sort((a, b) => a.orden - b.orden)
+    .slice(0, 6);
+
+  const maxUnidades = Math.max(...meses.map((m) => m.unidades), 1);
 
   return (
     <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-md">

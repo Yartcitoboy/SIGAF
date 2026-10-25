@@ -15,7 +15,8 @@ import {
   Users, 
   Settings,
   ShieldCheck,
-  Building2
+  Building2,
+  ShoppingCart
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -31,26 +32,31 @@ interface NavItem {
   badge?: number;
   badgeColor?: string;
   descripcion: string;
+  roles: string[]; // perfiles que pueden ver este módulo
 }
 
+// Roles: ADMIN ve todo · BODEGUERO gestión de stock · AUXILIAR solo consulta
 const modulosNavegacion: NavItem[] = [
   {
     nombre: 'Dashboard',
     href: '/dashboard',
     icono: LayoutDashboard,
     descripcion: 'Resumen de stock y alertas',
+    roles: ['ADMIN', 'BODEGUERO', 'AUXILIAR'],
   },
   {
     nombre: 'Inventario',
     href: '/inventario',
     icono: Boxes,
     descripcion: 'Stock consolidado por bodega',
+    roles: ['ADMIN', 'BODEGUERO', 'AUXILIAR'],
   },
   {
     nombre: 'Productos',
     href: '/productos',
     icono: Pill,
     descripcion: 'Catálogo de medicamentos',
+    roles: ['ADMIN', 'BODEGUERO'],
   },
   {
     nombre: 'Lotes',
@@ -59,12 +65,21 @@ const modulosNavegacion: NavItem[] = [
     badge: mockDashboardKpis.lotesVencidos + mockDashboardKpis.lotesCriticos,
     badgeColor: 'bg-red-500 text-white',
     descripcion: 'Fechas de caducidad y FEFO',
+    roles: ['ADMIN', 'BODEGUERO'],
+  },
+  {
+    nombre: 'Dispensación',
+    href: '/dispensacion',
+    icono: ShoppingCart,
+    descripcion: 'Venta guiada con motor FEFO',
+    roles: ['ADMIN', 'BODEGUERO', 'AUXILIAR'],
   },
   {
     nombre: 'Movimientos',
     href: '/movimientos',
     icono: ArrowLeftRight,
     descripcion: 'Kardex, traslados y mermas',
+    roles: ['ADMIN', 'BODEGUERO'],
   },
   {
     nombre: 'Alertas',
@@ -73,24 +88,28 @@ const modulosNavegacion: NavItem[] = [
     badge: mockDashboardKpis.alertasActivasSinLeer,
     badgeColor: 'bg-amber-500 text-white',
     descripcion: 'Notificaciones automáticas',
+    roles: ['ADMIN', 'BODEGUERO', 'AUXILIAR'],
   },
   {
     nombre: 'Reportes',
     href: '/reportes',
     icono: FileSpreadsheet,
     descripcion: 'Exportar PDF/XLS e importar',
+    roles: ['ADMIN', 'BODEGUERO'],
   },
   {
     nombre: 'Usuarios',
     href: '/usuarios',
     icono: Users,
     descripcion: 'Personal y asignación de roles',
+    roles: ['ADMIN'],
   },
   {
     nombre: 'Configuración',
     href: '/configuracion',
     icono: Settings,
     descripcion: 'Datos de farmacia y sucursales',
+    roles: ['ADMIN'],
   },
 ];
 
@@ -113,6 +132,12 @@ export const Sidebar: React.FC = () => {
   const iniciales = usuario?.nombre
     ? usuario.nombre.split(' ').slice(0, 2).map((p) => p.charAt(0)).join('').toUpperCase()
     : 'US';
+
+  // Rol del usuario actual (si no hay sesión aún, se muestran todos para no ocultar durante la carga)
+  const rolActual = usuario?.perfil?.nombre;
+  const modulosVisibles = rolActual
+    ? modulosNavegacion.filter((m) => m.roles.includes(rolActual))
+    : modulosNavegacion;
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800 shrink-0 sticky top-0 z-30">
@@ -148,7 +173,7 @@ export const Sidebar: React.FC = () => {
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
           Módulos de Gestión
         </p>
-        {modulosNavegacion.map((item) => {
+        {modulosVisibles.map((item) => {
           const Icon = item.icono;
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
 

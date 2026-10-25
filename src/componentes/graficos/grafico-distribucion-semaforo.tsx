@@ -1,25 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
-import { mockDashboardKpis } from '@/datos-mock/inventario-data';
 import { CheckCircle2, AlertTriangle, AlertCircle, XCircle } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 
-export const GraficoDistribucionSemaforo: React.FC = () => {
+interface Props {
+  lotesVerdes?: number;
+  lotesAmarillos?: number;
+  lotesCriticos?: number;
+  lotesVencidos?: number;
+}
+
+export const GraficoDistribucionSemaforo: React.FC<Props> = ({
+  lotesVerdes = 0,
+  lotesAmarillos = 0,
+  lotesCriticos = 0,
+  lotesVencidos = 0,
+}) => {
   const [segmentoActivo, setSegmentoActivo] = useState<string | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
-  const total = mockDashboardKpis.totalLotesRegistrados;
-  const pVerde = Math.round((mockDashboardKpis.lotesVerdes / total) * 100);
-  const pAmarillo = Math.round((mockDashboardKpis.lotesAmarillos / total) * 100);
-  const pRojo = Math.round((mockDashboardKpis.lotesCriticos / total) * 100);
-  const pVencido = Math.round((mockDashboardKpis.lotesVencidos / total) * 100);
+  const total = lotesVerdes + lotesAmarillos + lotesCriticos + lotesVencidos;
+  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+  const pVerde = pct(lotesVerdes);
+  const pAmarillo = pct(lotesAmarillos);
+  const pRojo = pct(lotesCriticos);
+  const pVencido = pct(lotesVencidos);
 
   const datos = [
     {
       id: 'verde',
       nombre: 'Vigentes (>90d)',
-      cantidad: mockDashboardKpis.lotesVerdes,
+      cantidad: lotesVerdes,
       porcentaje: pVerde,
       color: 'bg-emerald-500',
       colorTexto: 'text-emerald-700 dark:text-emerald-400',
@@ -31,7 +43,7 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
     {
       id: 'amarillo',
       nombre: 'Preventivos (30-90d)',
-      cantidad: mockDashboardKpis.lotesAmarillos,
+      cantidad: lotesAmarillos,
       porcentaje: pAmarillo,
       color: 'bg-amber-400',
       colorTexto: 'text-amber-700 dark:text-amber-400',
@@ -43,7 +55,7 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
     {
       id: 'rojo',
       nombre: 'Críticos (<30d)',
-      cantidad: mockDashboardKpis.lotesCriticos,
+      cantidad: lotesCriticos,
       porcentaje: pRojo,
       color: 'bg-red-500',
       colorTexto: 'text-red-700 dark:text-red-400',
@@ -55,7 +67,7 @@ export const GraficoDistribucionSemaforo: React.FC = () => {
     {
       id: 'vencido',
       nombre: 'Caducados (0d)',
-      cantidad: mockDashboardKpis.lotesVencidos,
+      cantidad: lotesVencidos,
       porcentaje: pVencido,
       color: 'bg-red-900',
       colorTexto: 'text-red-900 dark:text-red-400',

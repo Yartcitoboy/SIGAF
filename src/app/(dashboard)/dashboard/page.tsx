@@ -152,8 +152,13 @@ export default function DashboardAdminPage() {
 
       {/* 2. Sección de Gráficos Interactivos con entrada suave */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GraficoDistribucionSemaforo />
-        <GraficoVencimientosMeses />
+        <GraficoDistribucionSemaforo
+          lotesVerdes={kpis.lotesVerdes}
+          lotesAmarillos={kpis.lotesAmarillos}
+          lotesCriticos={kpis.lotesCriticos}
+          lotesVencidos={kpis.lotesVencidos}
+        />
+        <GraficoVencimientosMeses inventario={inventario} />
       </div>
 
       {/* 3. Tabla Operativa con transiciones suaves en filtrado */}
