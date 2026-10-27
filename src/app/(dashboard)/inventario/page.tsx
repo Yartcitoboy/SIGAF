@@ -6,23 +6,55 @@ import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
 import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
+import {
+  BotonDetalle,
+  DetalleProducto,
+} from "@/componentes/productos/detalle-producto";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
+import {
+  coincide,
+  tipoUbicacion,
+  fechaVisible,
+} from "@/lib/vistas/presentacion";
 export default function InventarioPage() {
   const consulta = useConsulta(obtenerOperacion);
   const [texto, setTexto] = useState("");
   const [bodega, setBodega] = useState("");
   const [estado, setEstado] = useState("");
+  const [orden, setOrden] = useState("vencimiento");
+  const [detalle, setDetalle] = useState<number | null>(null);
+  const limpiar = () => {
+    setTexto("");
+    setBodega("");
+    setEstado("");
+    setOrden("vencimiento");
+  };
   const filas =
-    consulta.datos?.inventario.filter(
-      (i) =>
-        (!bodega || String(i.id_bodega) === bodega) &&
-        (!estado || i.estado_semaforo === estado) &&
-        [
-          i.lote?.producto?.nombre,
-          i.lote?.producto?.codigo_barras,
-          i.lote?.producto?.principio_activo,
-          i.lote?.numero_lote,
-        ].some((v) => v?.toLowerCase().includes(texto.toLowerCase())),
-    ) ?? [];
+    consulta.datos?.inventario
+      .filter(
+        (i) =>
+          (!bodega || String(i.id_bodega) === bodega) &&
+          (!estado || i.estado_semaforo === estado) &&
+          coincide(
+            texto,
+            i.lote?.producto?.nombre,
+            i.lote?.producto?.codigo_barras,
+            i.lote?.producto?.principio_activo,
+            i.lote?.numero_lote,
+          ),
+      )
+      .sort((a, b) =>
+        orden === "stock"
+          ? a.stock_actual - b.stock_actual
+          : orden === "nombre"
+            ? (a.lote?.producto?.nombre ?? "").localeCompare(
+                b.lote?.producto?.nombre ?? "",
+                "es",
+              )
+            : (a.lote?.fecha_vencimiento ?? "").localeCompare(
+                b.lote?.fecha_vencimiento ?? "",
+              ),
+      ) ?? [];
   return (
     <TransicionPagina>
       <Header
@@ -57,12 +89,44 @@ export default function InventarioPage() {
           onChange={(e) => setEstado(e.target.value)}
         >
           <option value="">Todos los estados</option>
-          {["VERDE", "AMARILLO", "NARANJO", "VENCIDO"].map((s) => (
-            <option key={s}>{s}</option>
+          {[
+            ["VERDE", "Vigente"],
+            ["AMARILLO", "Preventivo"],
+            ["NARANJO", "Crítico"],
+            ["VENCIDO", "Caducado"],
+          ].map(([s, nombre]) => (
+            <option key={s} value={s}>
+              {nombre}
+            </option>
           ))}
         </select>
+        <select
+          aria-label="Orden del inventario"
+          className="campo w-auto!"
+          value={orden}
+          onChange={(e) => setOrden(e.target.value)}
+        >
+          <option value="vencimiento">Vencimiento más próximo</option>
+          <option value="stock">Menor stock primero</option>
+          <option value="nombre">Nombre del medicamento</option>
+        </select>
       </div>
-      <EstadoDatos {...consulta} vacio={!filas.length} />
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={filas.length}
+          total={consulta.datos.inventario.length}
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+          limpiar={limpiar}
+        />
+      )}
+      <EstadoDatos
+        {...consulta}
+        vacio={!filas.length}
+        filtrado={Boolean(texto || bodega || estado)}
+        limpiar={limpiar}
+      />
       {consulta.datos &&
         !consulta.cargando &&
         !consulta.error &&
@@ -82,7 +146,12 @@ export default function InventarioPage() {
                 {filas.map((i) => (
                   <tr key={i.id_inventario}>
                     <td>
-                      <p className="font-medium">{i.lote?.producto?.nombre}</p>
+                      <BotonDetalle
+                        nombre={i.lote?.producto?.nombre ?? "producto"}
+                        abrir={() => setDetalle(i.id_lote)}
+                      >
+                        {i.lote?.producto?.nombre ?? "Producto no disponible"}
+                      </BotonDetalle>
                       <p className="text-xs text-muted">
                         {i.lote?.numero_lote} ·{" "}
                         {i.lote?.producto?.codigo_barras}
@@ -91,12 +160,20 @@ export default function InventarioPage() {
                     <td>
                       {i.bodega?.nombre}
                       <p className="text-xs text-muted">
-                        {i.bodega?.ubicacion} ·{" "}
-                        {i.bodega?.es_sala_ventas ? "Sala de ventas" : "Bodega"}
+                        {i.bodega?.ubicacion} · {tipoUbicacion(i.bodega)}
                       </p>
                     </td>
-                    <td className="font-semibold">{i.stock_actual}</td>
-                    <td>{i.lote?.fecha_vencimiento}</td>
+                    <td className="font-semibold">
+                      {i.stock_actual}
+                      <p className="mt-1 text-xs font-normal text-muted">
+                        {i.lote?.producto?.unidad_medida ||
+                          "Unidad sin especificar"}
+                      </p>
+                      {i.stock_actual === 0 && (
+                        <span className="text-xs text-muted">Agotado</span>
+                      )}
+                    </td>
+                    <td>{fechaVisible(i.lote?.fecha_vencimiento)}</td>
                     <td>
                       <SemaforoBadge
                         estado={i.estado_semaforo}
@@ -109,6 +186,13 @@ export default function InventarioPage() {
             </table>
           </div>
         )}
+      {detalle !== null && consulta.datos && (
+        <DetalleProducto
+          referencia={{ tipo: "lote", id: detalle }}
+          datos={consulta.datos}
+          cerrar={() => setDetalle(null)}
+        />
+      )}
     </TransicionPagina>
   );
 }

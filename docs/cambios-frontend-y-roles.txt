@@ -1,0 +1,270 @@
+SIGAF
+Cambios de frontend y propuesta de roles
+Rama local front-isa
+Fecha 23 de octubre de 2026
+
+1. CONCLUSIÓN Y ALCANCE
+
+Esta entrega mejora la interfaz sobre la conexión existente. No cambia Supabase,
+tablas, migraciones, RLS, APIs, autenticación, tipos persistentes ni servicios.
+El Login y sus tarjetas de acceso se mantienen sin modificaciones.
+
+Los formularios antes bloqueados se pueden recorrer como VISTA PREVIA cuando se
+utilizan tarjetas temporales o falta la estructura necesaria. Permiten completar
+y validar datos locales, pero NO los guardan, NO modifican stock, NO crean cuentas
+y NO envían correos. Sus datos se descartan al cerrar o abandonar la pantalla.
+No se guardan borradores con contraseñas en almacenamiento del navegador.
+
+Los datos consultados siguen siendo los de Supabase. No se sustituyen por un
+inventario de ejemplo y no se agregan registros ficticios a las tablas visibles.
+Las operaciones institucionales que ya existían conservan sus servicios y sus
+controles del servidor; no fueron ejecutadas durante la verificación.
+
+Una interfaz preparada no equivale a una operación productiva habilitada. Los
+problemas de seguridad y persistencia identificados en la auditoría siguen
+pendientes de una etapa de backend expresamente autorizada y coordinada.
+
+2. CAMBIOS POR PANTALLA
+
+Dashboard de Administración
+Cambio: identifica ADMIN como administración general y agrega filtro de sucursal.
+Motivo: distinguir el alcance del administrador de una consulta puntual.
+Función: filtra en el navegador datos ya recibidos; no cambia permisos ni RLS.
+Rol: ADMIN, con todas las sucursales disponibles en su alcance actual.
+
+Cambio: separa stock físico, apto por fecha y bloqueado por fecha u holgura.
+Motivo: no confundir existencias físicas con unidades utilizables.
+Función: presenta tres resúmenes calculados sobre los registros consultados.
+Límite: apto por fecha NO acredita liberación sanitaria ni venta autorizada.
+
+Cambio: el gráfico futuro excluye caducados y el día actual; las decisiones se
+ordenan por vencimiento, permiten abrir detalle y ver más de veinte pendientes.
+Motivo: priorizar intervenciones y no presentar vencidos como próximos a vencer.
+Cambio: las mermas sin costos muestran valoración desconocida y FEFO indica el
+período actual y distingue salidas sin evaluación de incumplimientos.
+
+Dashboard de Bodeguero
+Cambio: distingue stock físico del apto y bloqueado; sus accesos temporales se
+llaman consultar/preparar, sin prometer que se puede registrar una operación.
+Motivo: mantener una hoja de ruta útil y evitar acciones que parecen ejecutadas.
+Función: revisar lotes por ubicación y consultar el detalle contextual.
+Rol: BODEGUERO de la sucursal asignada, no gerente de otras sucursales.
+
+Dashboard de Auxiliar y salidas
+Cambio: permite indicar cantidad entera y ver saldo previsto y presentación.
+Motivo: evitar depender de repetidas pulsaciones de una unidad y aclarar qué se
+está contando. No convierte cajas a comprimidos ni transforma presentaciones.
+Función: validar un borrador; la entrega real sigue dependiendo de la operación
+existente y de sus comprobaciones del servidor.
+
+Cuando falta clasificación de sala se puede abrir una simulación visual usando
+un lote real apto por fecha. Se identifica expresamente como simulación, no
+habilita la entrega ni clasifica automáticamente una bodega. También hay una
+preparación visual de solicitud de reposición que NO se envía a otra persona.
+Rol: AUXILIAR. No equivale a un punto de venta con cobro o comprobante comercial.
+
+Inventario
+Cambio: búsqueda tolerante a tildes, orden por vencimiento/stock/nombre, filtros
+con nombres comprensibles, contador, actualización y limpieza de filtros.
+Motivo: localizar existencias sin confundir filtros vacíos con falta de conexión.
+Función: abrir desde el inventario el mismo detalle usado en otras pantallas.
+Cambio: una clasificación ausente se muestra como pendiente, no como Bodega.
+Rol: ADMIN, BODEGUERO y AUXILIAR según los datos recibidos para su cuenta.
+
+Productos y ficha de medicamento
+Cambio: los formularios de preparación/revisión pueden abrirse en acceso temporal.
+Motivo: poder probar la ficha antes de integrar escritura en el esquema compartido.
+Función: validar visualmente nombre, categoría, código y formato de referencia
+sanitaria. Los códigos numéricos nuevos se comprueban como GTIN; no se impide
+consultar ni se reemplaza automáticamente un código histórico existente.
+Límite: el enlace ISP y el formato no verifican por sí mismos vigencia sanitaria.
+Rol: ADMIN prepara/edita; BODEGUERO consulta el catálogo.
+
+Lotes
+Cambio: filtros por estado y stock físico/agotado, contador, fechas legibles y
+limpieza. El lote conserva su vínculo al panel contextual.
+Motivo: distinguir lotes con existencias de lotes históricos agotados.
+Rol: ADMIN y BODEGUERO. La recepción temporal se abre como borrador.
+
+Recepción
+Cambio: exige identificar producto al escanear y limpia lote, vencimiento y
+fabricación al cambiar de producto. Un escaneo sin identidad no se aplica al
+producto seleccionado previamente.
+Motivo: evitar mezclar datos de dos envases o conservar información obsoleta.
+Función: validación local de código, cantidad, vencimiento, fabricación e ingreso;
+presentación visible, campos bloqueados durante el envío institucional existente
+y aviso inequívoco de borrador no guardado en vista previa.
+Rol: ADMIN y BODEGUERO.
+Límite: múltiples recepciones del mismo lote y documentos de proveedor requieren
+definir posteriormente el proceso y su soporte de backend.
+
+Detalle del producto
+Cambio: separa stock físico total y apto por fecha; incluye riesgo preventivo y
+no llama vencimiento a todo bloqueo por holgura.
+Motivo: que el estado resumido no contradiga los lotes y sus cantidades.
+Función: aclara el registro pulsado frente a los totales de todos los lotes del
+producto en el alcance consultado. No inventa proveedor ni stock mínimo.
+Rol: usuarios que ya tienen acceso al módulo desde el que se abre el detalle.
+
+Movimientos, traslados, mermas y devoluciones
+Cambio: filtros por texto, tipo, fechas y ubicación de origen o destino;
+orden cronológico; responsable identificable por el final del UUID, con ID
+completo disponible. No se inventan nombres de autores históricos.
+Motivo: facilitar búsqueda y distinguir responsables que comparten prefijo.
+
+Cambio: origen, cantidad, motivo expreso y destino se revisan antes de confirmar;
+se muestra saldo previsto y presentación. El motivo de traslado tiene un máximo
+visual de 150 caracteres, alineado con el contrato existente.
+Función: en vista previa valida sin llamar a la operación de stock.
+La causa de merma no viene elegida automáticamente. Se explica que devolución,
+pérdida económica, retiro físico y destrucción no son hechos equivalentes.
+Rol: ADMIN y BODEGUERO.
+Límite: no hay aprobación ni recepción de traslado implementada en servidor.
+
+Alertas y campana
+Cambio: se usa Leída/No leída, no Atendida/Resuelta, para el estado existente.
+Motivo: leer un mensaje no prueba que se resolvió su causa.
+Función: búsqueda, filtro de tipo, orden por fecha, actualización y aviso de que
+los plazos escritos pertenecen a la emisión histórica. En las tarjetas la campana
+ya no asegura que todo está al día si no hay una bandeja personal asociada.
+Rol: todos según destinatarios y alcance actuales. No se envían correos.
+
+Reportes
+Cambio: vista previa de cinco filas con total; etiquetas que distinguen fecha
+de vencimiento de fecha de operación; validación de rango y botones coherentes.
+Motivo: conocer el contenido antes de descargar y evitar llamar rotación a un
+listado que no calcula rotación. Ahora se presenta como Libro de movimientos.
+
+Función: la preparación del documento en el navegador incluye traslados entrantes
+si su destino está en el alcance seleccionado. La vista previa y la descarga usan
+la misma proyección de datos ya consultados; no se cambia el servicio ni la base.
+Con tarjetas la descarga sigue siendo local, sin registro de emisión en Supabase.
+Rol: ADMIN. No reconstruye stock histórico ni certifica cumplimiento sanitario.
+
+Usuarios y permisos
+Cambio: permite revisar y validar formularios locales sin crear cuentas reales;
+ADMIN se identifica como Administrador general y el alcance se muestra explícito.
+Motivo: una sucursal de referencia no limita por sí sola el ADMIN actual.
+Función: rol y sucursal coherentes en el formulario; sucursal obligatoria para
+personal operativo y avisos sobre alcance. No se agrega un cuarto rol ficticio.
+Rol: ADMIN. La creación institucional sigue dependiendo de la integración Auth.
+
+Configuración
+Cambio: navegación por Política, Farmacia y Sucursales y ubicaciones.
+Motivo: separar tareas y permitir consultar selectores antes bloqueados.
+Función: consultar maestros existentes y preparar borradores locales, con
+validación visual de umbrales, campos vacíos, RUT y tipo/tamaño del logo.
+El logo de hasta 250 KB solo se valida para el borrador. Su almacenamiento grande
+no se presenta como resuelto; el envío institucional avisa del límite actual.
+Se evita desde la interfaz reasignar una bodega con stock a otra sucursal durante
+una edición institucional. Esto no sustituye una restricción del servidor.
+Rol: ADMIN.
+
+Elementos comunes y temas
+Cambio: contador de resultados, hora de consulta, actualizar y limpiar filtros;
+vacíos diferentes para sin registros y sin coincidencias; foco al cerrar diálogos,
+títulos accesibles únicos y encabezado fijo durante el desplazamiento del modal.
+Se añade acceso de teclado para saltar al contenido.
+Motivo: mejorar orientación y accesibilidad sin cambiar las consultas existentes.
+
+Se conservan los cinco colores base actuales de cada rol, incluidos los que ya
+estaban en la rama isa. Solo se ajustan tonos de uso para contraste en texto,
+botones y navegación. Las pruebas se alinean con esas paletas vigentes; no se
+revierte el diseño del equipo a una propuesta anterior. Login no se modifica.
+
+Fechas
+Si un timestamp especifica zona, se presenta en hora chilena. Si un registro
+histórico no incluye zona, se conserva y se identifica como hora de origen.
+No se inventa una zona UTC para datos que no la declaran.
+
+3. LOS ROLES ACTUALES Y LA PROPUESTA PARA VARIAS SUCURSALES
+
+Estado actual
+ADMIN es general: administra las sucursales y no está limitado a la farmacia
+principal por tener un id_sucursal de referencia. BODEGUERO y AUXILIAR son
+operativos de su sucursal. El filtro visual por sucursal no cambia esto.
+La protección efectiva de datos y el aislamiento empresarial siguen pendientes
+de revisión en backend; las etiquetas de alcance no los implementan.
+
+¿Están bien los tres roles?
+Sí, son una base coherente para una operación pequeña en la que una sola persona
+administra toda la organización. Falta una responsabilidad de gestión local si
+cada sucursal tendrá una persona que supervise a su equipo y sus indicadores.
+No conviene dar ADMIN a todos esos responsables, porque sería alcance general.
+
+Modelo recomendado para tu caso
+
+ADMINISTRADOR GENERAL
+Alcance: la empresa o farmacia como organización y todas sus sucursales, incluida
+la casa matriz. Mantiene políticas generales, estructura, usuarios y reportes
+consolidados. No debe confundirse con el administrador técnico de toda una
+plataforma SaaS que atiende a empresas independientes.
+
+GERENTE DE SUCURSAL
+Alcance: una sucursal asignada. Supervisa indicadores, equipo, reposiciones y
+solicitudes de bajas/traslados de su sucursal. Se deben acordar sus facultades de
+aprobación. No cambia políticas globales ni puede otorgarse alcance general.
+Este rol está PROPUESTO, NO creado ni activado en esta entrega.
+
+BODEGUERO
+Alcance: operaciones físicas de su sucursal o bodegas asignadas. Recibe, ubica,
+prepara traslados y registra o solicita bajas según las reglas que se acuerden.
+No debe actuar como gerente solo para poder ejecutar sus tareas logísticas.
+
+AUXILIAR
+Alcance: consulta y salida/dispensación operativa de su sucursal siguiendo el
+flujo permitido. No administra usuarios ni políticas ni aprueba sus propias bajas.
+
+Relación práctica
+Empresa o farmacia como organización
+  Administrador general
+    Sucursal principal o casa matriz
+      Gerente de sucursal
+      Bodeguero y auxiliares
+    Otras sucursales
+      Gerente de cada sucursal
+      Bodeguero y auxiliares
+
+La sucursal principal sigue siendo una sucursal; no obliga a que todas las demás
+dependan de sus datos de inventario. El administrador general consolida la empresa.
+Si más adelante una persona gestiona varias sucursales, se debe modelar una
+asignación de alcance y no crear un rol distinto por cada combinación de sucursales.
+
+El gerente no sustituye una responsabilidad sanitaria profesional. Si el sistema
+va a incluir aprobaciones clínicas/sanitarias, se deberán definir sus responsables
+y permisos por separado; esta entrega no acredita facultades profesionales.
+
+4. PENDIENTES EXPRESAMENTE FUERA DE ESTA ENTREGA
+
+- Seguridad efectiva de Supabase, RLS, grants y acceso directo con clave pública.
+- Aislamiento de empresas independientes y permisos del gerente en servidor.
+- Compatibilidad de escritura con tablas/campos/RPC del esquema compartido.
+- Liberación, cuarentena, retiro sanitario y bloqueo efectivo de operaciones.
+- Unidad base, fraccionamiento y conversiones persistentes de presentación.
+- Conciliación contable de existencias, saldos iniciales y movimientos históricos.
+- Proveedores, compras, documentos de recepción y recepciones parciales/repetidas.
+- Flujos persistentes de aprobación, traslado en tránsito y reposición.
+- Integración de Auth, planificador, correos y almacenamiento ampliado de logos.
+- Historial inmutable de cambios y emisiones de reportes.
+
+Las validaciones visuales NO sustituyen controles de servidor y las simulaciones
+NO son prueba de que una operación real esté habilitada. No se ejecutaron
+migraciones ni se enviaron transacciones de prueba a la base compartida.
+
+5. VERIFICACIÓN Y ENTREGA
+
+La rama de trabajo comprobada es front-isa. No se crea commit ni se hace push.
+Pruebas automatizadas: 43 correctas, incluidas 9 nuevas de presentación frontend
+y las comprobaciones de contraste de las seis variantes de tema.
+Resultado final: tipado y lint correctos; compilación de producción con webpack
+correcta. Se conservan las 43 pruebas automatizadas correctas.
+En navegador se comprobaron los tres accesos temporales, los borradores de ficha,
+recepción, merma y salida sin envío, el borrador de cuenta, los filtros vacíos,
+la vista previa de reportes, los selectores de maestros y el tema oscuro.
+Las pruebas de PostgreSQL preexistentes usan una base aislada; no son evidencia
+de que las migraciones estén instaladas en el proyecto Supabase compartido.
+Las pruebas de interfaz se limitan a consultas y borradores locales; no se usan
+credenciales institucionales ni se registran recepciones, salidas o bajas reales.
+
+No se afirma certificación de accesibilidad ni prueba en todos los móviles.
+El documento y los cambios quedan en el proyecto para revisión con tu compañero.

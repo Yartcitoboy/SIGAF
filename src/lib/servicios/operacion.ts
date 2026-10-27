@@ -1,6 +1,7 @@
 import type { Inventario } from "@/tipos/database";
 import { leerTabla, solicitarDatos } from "./datos";
 import { calcularSemaforoLote } from "./semaforo";
+import { obtenerContextoSistema } from "./contexto";
 
 export async function obtenerOperacion() {
   const [
@@ -13,6 +14,7 @@ export async function obtenerOperacion() {
     sucursales,
     farmacias,
     config,
+    sistema,
   ] = await Promise.all([
     leerTabla("inventario"),
     leerTabla("lote"),
@@ -23,6 +25,7 @@ export async function obtenerOperacion() {
     leerTabla("sucursal"),
     leerTabla("farmacia"),
     leerTabla("configuracion"),
+    obtenerContextoSistema(),
   ]);
   const configuracion = config.find((c) => c.id === 1);
   if (!configuracion)
@@ -47,17 +50,24 @@ export async function obtenerOperacion() {
             dias_restantes: calcularSemaforoLote(
               lote.fecha_vencimiento,
               configuracion,
+              sistema.hoy,
             ).diasRestantes,
           }
         : undefined,
       bodega: bodegasMap.get(i.id_bodega),
       estado_semaforo: lote
-        ? calcularSemaforoLote(lote.fecha_vencimiento, configuracion).estado
+        ? calcularSemaforoLote(
+            lote.fecha_vencimiento,
+            configuracion,
+            sistema.hoy,
+          ).estado
         : null,
     };
   });
   const mapa = new Map(inventario.map((i) => [i.id_inventario, i]));
   return {
+    hoy: sistema.hoy,
+    ahora: sistema.ahora,
     inventario,
     productos,
     bodegas,

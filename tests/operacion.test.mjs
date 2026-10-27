@@ -8,7 +8,7 @@ test("PostgreSQL: migraciones, RLS, FEFO, stock atómico y alertas", async (t) =
   const db = new PGlite();
   try {
     await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS;
-      CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
+      CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY,email_confirmed_at timestamptz DEFAULT now(),deleted_at timestamptz,is_anonymous boolean DEFAULT false); CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS
       $$ SELECT NULLIF(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
       GRANT USAGE ON SCHEMA auth,public TO authenticated,anon,service_role;
       GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon,service_role;`);
@@ -17,6 +17,11 @@ test("PostgreSQL: migraciones, RLS, FEFO, stock atómico y alertas", async (t) =
       "002_operacion_segura.sql",
       "003_resumenes_correo.sql",
       "004_proteger_administracion.sql",
+      "005_contexto_y_preferencias.sql",
+      "006_procedencia_catalogo_isp.sql",
+      "20261027065931_seguridad_cuentas_reales.sql",
+      "20261027072035_optimizar_politicas_sesion.sql",
+      "20261027205509_proteger_ultimo_admin_real.sql",
     ]) {
       await db.exec(
         await readFile(
@@ -39,6 +44,7 @@ test("PostgreSQL: migraciones, RLS, FEFO, stock atómico y alertas", async (t) =
       INSERT INTO usuario(id_usuario,nombre,email,id_perfil,id_sucursal,activo) VALUES
       ('${admin}','Admin','admin@example.test',1,NULL,true),('${bodeguero}','Bodega','bodega@example.test',2,1,true),
       ('${auxiliar}','Auxiliar','aux@example.test',3,1,true),('${inactivo}','Inactivo','inactivo@example.test',2,1,false);`);
+    await db.exec(`INSERT INTO auth.users(id) SELECT id_usuario FROM usuario;`);
     const como = async (id, rol = "authenticated") => {
       await db.exec("RESET ROLE; SET ROLE " + rol);
       await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [
@@ -197,6 +203,27 @@ test("PostgreSQL: migraciones, RLS, FEFO, stock atómico y alertas", async (t) =
       );
     });
     await t.test(
+      "un Admin histórico sin Auth no cuenta como respaldo del último Admin real",
+      async () => {
+        const historico = randomUUID();
+        await db.query(
+          "INSERT INTO usuario(id_usuario,nombre,email,id_perfil,activo) VALUES($1,'Admin histórico','hist-admin@example.test',1,true)",
+          [historico],
+        );
+        await assert.rejects(
+          db.query("UPDATE usuario SET activo=false WHERE id_usuario=$1", [
+            admin,
+          ]),
+          /vinculada a Auth/,
+        );
+        await assert.rejects(
+          db.query("DELETE FROM usuario WHERE id_usuario=$1", [admin]),
+          /vinculada a Auth/,
+        );
+        await db.query("DELETE FROM usuario WHERE id_usuario=$1", [historico]);
+      },
+    );
+    await t.test(
       "cron solo accesible al servidor y datos inaccesibles al anónimo",
       async () => {
         await como(auxiliar);
@@ -216,10 +243,35 @@ test("PostgreSQL: migraciones, RLS, FEFO, stock atómico y alertas", async (t) =
       },
     );
     await t.test(
+      "autores históricos sin Auth no reciben alertas ni correo",
+      async () => {
+        const historico = randomUUID();
+        await db.query(
+          "INSERT INTO usuario(id_usuario,nombre,email,id_perfil,id_sucursal,activo) VALUES($1,'Autor histórico','historia@example.test',2,1,true)",
+          [historico],
+        );
+        await db.exec("SELECT generar_alertas()");
+        assert.equal(
+          await valor(
+            "SELECT count(*)::int FROM notificacion WHERE id_usuario=$1",
+            [historico],
+          ),
+          0,
+        );
+        assert.equal(
+          await valor(
+            "SELECT count(*)::int FROM correo_resumen WHERE id_usuario=$1",
+            [historico],
+          ),
+          0,
+        );
+        // Las alertas generadas se reutilizan en la prueba de deduplicación.
+        assert.ok(await valor("SELECT count(*)::int FROM notificacion"));
+      },
+    );
+    await t.test(
       "alertas sin duplicados, resúmenes y reserva exclusiva",
       async () => {
-        const primera = await valor("SELECT generar_alertas()");
-        assert.ok(primera > 0);
         assert.equal(await valor("SELECT generar_alertas()"), 0);
         const total = await valor("SELECT count(*)::int FROM correo_resumen");
         assert.equal(total, 2);

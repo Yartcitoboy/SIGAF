@@ -125,11 +125,15 @@ test("reportes: alcance por farmacia y fechas, Excel real y PDF paginado", async
       .filas.length,
     0,
   );
-  const libro = await crearLibroExcel([tabla], {
-    farmacia: farmacia.razon_social,
-    rut: farmacia.rut,
-    filtros: "Todas",
-  });
+  const libro = await crearLibroExcel(
+    [tabla],
+    {
+      farmacia: farmacia.razon_social,
+      rut: farmacia.rut,
+      filtros: "Todas",
+    },
+    "2026-10-19T15:00:00Z",
+  );
   const binario = XLSX.write(libro, { type: "buffer", bookType: "xlsx" });
   const reabierto = XLSX.read(binario, { type: "buffer" });
   assert.equal(reabierto.Sheets.Inventario.A2.v, "Medicamento de prueba");

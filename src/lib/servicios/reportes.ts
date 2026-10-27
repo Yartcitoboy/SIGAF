@@ -1,5 +1,24 @@
 import type { DatosOperacion } from "./operacion";
 import type { Farmacia } from "@/tipos/database";
+import { leerTabla } from "./datos";
+import { nombreResponsable } from "../vistas/responsables";
+export async function obtenerHistorialReportes() {
+  const [reportes, personas] = await Promise.all([
+    leerTabla("reporte"),
+    leerTabla("usuario").catch(() => []),
+  ]);
+  return reportes
+    .slice()
+    .sort(
+      (a, b) =>
+        b.fecha_generacion.localeCompare(a.fecha_generacion) ||
+        b.id_reporte - a.id_reporte,
+    )
+    .map((r) => ({
+      ...r,
+      responsable: nombreResponsable(r.id_usuario, personas),
+    }));
+}
 export type TipoInforme = "INVENTARIO" | "MERMAS" | "ROTACION";
 export interface FiltroReporte {
   farmacia: number;
@@ -135,7 +154,7 @@ export async function crearPDF(
   farmacia: Farmacia,
   ubicacion: string,
   filtros: string,
-  emitido = new Date(),
+  emitido: Date,
 ) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([
     import("jspdf"),
@@ -259,6 +278,7 @@ export async function crearPDF(
 export async function crearLibroExcel(
   tablas: TablaReporte[],
   identidad: { farmacia: string; rut: string; filtros: string },
+  emitido: string,
 ) {
   const XLSX = await import("xlsx");
   const libro = XLSX.utils.book_new();
@@ -284,7 +304,9 @@ export async function crearLibroExcel(
       ["Filtros", identidad.filtros],
       [
         "Emisión (Chile)",
-        new Date().toLocaleString("es-CL", { timeZone: "America/Santiago" }),
+        new Date(emitido).toLocaleString("es-CL", {
+          timeZone: "America/Santiago",
+        }),
       ],
     ]),
     "Identificación",

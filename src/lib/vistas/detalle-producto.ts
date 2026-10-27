@@ -1,6 +1,6 @@
 import type { Categoria } from "@/tipos/database";
 import type { DatosOperacion } from "@/lib/servicios/operacion";
-import { diasHasta, fechaChile } from "../servicios/fechas";
+import { diasHasta } from "../servicios/fechas";
 import { calcularSemaforoLote } from "../servicios/semaforo";
 
 export type ReferenciaDetalle = {
@@ -12,7 +12,7 @@ export function prepararDetalleProducto(
   datos: DatosOperacion,
   categorias: Categoria[],
   referencia: ReferenciaDetalle,
-  hoy = fechaChile(),
+  hoy = datos.hoy,
 ) {
   const movimiento =
     referencia.tipo === "movimiento"
@@ -62,7 +62,7 @@ export function prepararDetalleProducto(
     (i) =>
       i.stock_actual > 0 &&
       diasHasta(mapaLotes.get(i.id_lote)!.fecha_vencimiento, hoy) <=
-        datos.configuracion.dias_critico,
+        datos.configuracion.dias_preventivo,
   );
   const idsInventario = new Set(inventario.map((i) => i.id_inventario));
   const ubicaciones = [...new Set(inventario.map((i) => i.id_bodega))].map(
@@ -107,7 +107,7 @@ export function prepararDetalleProducto(
       stockActual === 0
         ? "Sin stock"
         : stockApto === 0
-          ? "Bloqueado por vencimiento"
+          ? "Bloqueado por fecha u holgura"
           : conAlertas
             ? "Con lotes en alerta"
             : "Disponible",

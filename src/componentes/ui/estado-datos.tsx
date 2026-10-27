@@ -4,11 +4,15 @@ export function EstadoDatos({
   error,
   vacio,
   recargar,
+  filtrado = false,
+  limpiar,
 }: {
   cargando: boolean;
   error: string | null;
   vacio?: boolean;
   recargar?: () => void;
+  filtrado?: boolean;
+  limpiar?: () => void;
 }) {
   if (cargando)
     return (
@@ -37,10 +41,23 @@ export function EstadoDatos({
     return (
       <div className="panel my-4 py-12 text-center">
         <Database className="mx-auto mb-3 text-acento" />
-        <h3 className="font-semibold">Aún no hay registros</h3>
+        <h3 className="font-semibold">
+          {filtrado ? "No hay coincidencias" : "Aún no hay registros"}
+        </h3>
         <p className="mt-2 text-sm text-muted">
-          Los datos aparecerán aquí cuando se registren operaciones.
+          {filtrado
+            ? "Prueba otra búsqueda o restablece los filtros. Los datos existentes no se han eliminado."
+            : "Los datos aparecerán aquí cuando se registren operaciones."}
         </p>
+        {filtrado && limpiar && (
+          <button
+            type="button"
+            className="boton-secundario mt-4"
+            onClick={limpiar}
+          >
+            Limpiar filtros
+          </button>
+        )}
       </div>
     );
   return null;

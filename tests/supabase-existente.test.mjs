@@ -14,7 +14,7 @@ registerHooks({
     return next(s, c);
   },
 });
-const { leerSupabaseExistente, faltaTablaConfiguracion } =
+const { leerSupabaseExistente } =
   await import("../src/lib/datos/supabase-existente.ts");
 function conexion({ tablas = {}, errores = {} } = {}) {
   const peticiones = [];
@@ -65,8 +65,16 @@ function conexion({ tablas = {}, errores = {} } = {}) {
   );
   return { db, peticiones };
 }
-const admin = { rol: "ADMIN", id_sucursal: null, id_usuario: "temporal" };
-const bodega = { rol: "BODEGUERO", id_sucursal: 1, id_usuario: "temporal" };
+const admin = {
+  rol: "ADMIN",
+  id_sucursal: null,
+  id_usuario: "cuenta-de-prueba",
+};
+const bodega = {
+  rol: "BODEGUERO",
+  id_sucursal: 1,
+  id_usuario: "cuenta-de-prueba",
+};
 test("Supabase existente: catálogo completo mediante consultas, sin datos locales ni límite de 1000", async () => {
   const productos = Array.from({ length: 1005 }, (_, i) => ({
     id_producto: i + 1,
@@ -78,30 +86,21 @@ test("Supabase existente: catálogo completo mediante consultas, sin datos local
   assert.equal(peticiones.length, 3);
   assert.ok(peticiones.every((p) => p.tabla === "producto"));
 });
-test("Supabase existente: ausencia de configuracion usa solo los umbrales originales", async () => {
-  const { db, peticiones } = conexion({
+test("Supabase existente: falta de configuración genera error, sin umbrales locales", async () => {
+  const { db } = conexion({
     errores: {
       configuracion: {
         code: "PGRST205",
-        message:
-          "Could not find the table 'public.configuracion' in the schema cache",
+        message: "Could not find table public.configuracion",
       },
     },
   });
-  const [c] = await leerSupabaseExistente(db, "configuracion", admin);
-  assert.equal(c.dias_critico, 7);
-  assert.equal(c.dias_preventivo, 30);
-  assert.equal(c.holgura_dias, 0);
-  assert.equal(c.esquema_original, true);
-  assert.equal(peticiones.length, 1);
-  assert.equal(
-    faltaTablaConfiguracion({
-      code: "PGRST205",
-      message: "Table public.producto does not exist",
-    }),
-    false,
+  await assert.rejects(
+    leerSupabaseExistente(db, "configuracion", admin),
+    /configuracion/,
   );
 });
+
 test("Supabase existente: no oculta permisos, red ni una configuración vacía", async () => {
   const a = conexion({
     errores: {
@@ -112,12 +111,12 @@ test("Supabase existente: no oculta permisos, red ni una configuración vacía",
     },
   });
   await assert.rejects(
-    leerSupabaseExistente(a.db, "configuracion"),
+    leerSupabaseExistente(a.db, "configuracion", admin),
     /permission denied/,
   );
   const b = conexion({ tablas: { configuracion: [] } });
   await assert.rejects(
-    leerSupabaseExistente(b.db, "configuracion"),
+    leerSupabaseExistente(b.db, "configuracion", admin),
     /falta su registro/,
   );
   const c = conexion({
@@ -133,7 +132,7 @@ test("Supabase existente: no oculta permisos, red ni una configuración vacía",
     /permission denied/,
   );
 });
-test("Supabase existente: personal temporal mantiene catálogo común y stock de su sucursal", async () => {
+test("Supabase existente: personal autenticado mantiene catálogo común y stock de su sucursal", async () => {
   const { db } = conexion({
     tablas: {
       producto: [{ id_producto: 1 }, { id_producto: 2 }],
@@ -194,5 +193,9 @@ test("Supabase existente: usuarios sin hashes y sin suplantar destinatarios de a
   assert.equal("password_hash" in u, false);
   const n = peticiones.length;
   assert.deepEqual(await leerSupabaseExistente(db, "notificacion", bodega), []);
-  assert.equal(peticiones.length, n);
+  assert.equal(peticiones.length, n + 1);
+  assert.equal(
+    peticiones.at(-1).url.searchParams.get("id_usuario"),
+    "eq." + bodega.id_usuario,
+  );
 });

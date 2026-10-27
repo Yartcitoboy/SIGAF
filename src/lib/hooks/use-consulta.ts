@@ -5,7 +5,8 @@ export function useConsulta<T>(consulta: () => Promise<T>) {
     datos: T | null;
     cargando: boolean;
     error: string | null;
-  }>({ datos: null, cargando: true, error: null });
+    actualizado: string | null;
+  }>({ datos: null, cargando: true, error: null, actualizado: null });
   const secuencia = useRef(0);
   const solicitar = useCallback(() => {
     const actual = ++secuencia.current;
@@ -14,12 +15,24 @@ export function useConsulta<T>(consulta: () => Promise<T>) {
       .then(
         (datos) => {
           if (actual === secuencia.current)
-            setEstado({ datos, cargando: false, error: null });
+            setEstado({
+              datos,
+              cargando: false,
+              error: null,
+              actualizado:
+                datos &&
+                typeof datos === "object" &&
+                "ahora" in datos &&
+                typeof datos.ahora === "string"
+                  ? datos.ahora
+                  : null,
+            });
         },
         (e) => {
           if (actual === secuencia.current)
             setEstado({
               datos: null,
+              actualizado: null,
               cargando: false,
               error:
                 e instanceof Error

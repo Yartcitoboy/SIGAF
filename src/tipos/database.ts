@@ -74,6 +74,12 @@ export interface Producto {
   principio_activo?: string | null;
   registro_isp?: string | null;
   vida_util_meses?: number | null;
+  titular_isp?: string | null;
+  fecha_registro_isp?: string | null;
+  estado_registro_isp?: string | null;
+  fuente_isp?: string | null;
+  fecha_consulta_isp?: string | null;
+  importado_isp_en?: string | null;
 }
 
 export interface Lote {
@@ -151,8 +157,6 @@ export interface Configuracion {
   dias_critico: number;
   dias_preventivo: number;
   holgura_dias: number;
-  /** Metadato de la vista: indica umbrales originales sin tabla configuracion. No es una columna SQL. */
-  esquema_original?: boolean;
 }
 export interface CorreoResumen {
   id_envio: string;
@@ -207,9 +211,15 @@ export interface Database {
       reporte: Tabla<Reporte>;
       configuracion: Tabla<Configuracion>;
       correo_resumen: Tabla<CorreoResumen>;
+      preferencia_usuario: Tabla<{
+        id_usuario: string;
+        tema: "claro" | "oscuro";
+        actualizado: string;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
+      contexto_sigaf: { Args: Record<string, never>; Returns: Json };
       recibir_lote: { Args: { p_datos: Json }; Returns: number };
       operar_stock: {
         Args: {

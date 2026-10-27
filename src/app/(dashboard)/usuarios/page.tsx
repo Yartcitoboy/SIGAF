@@ -11,7 +11,8 @@ import {
   obtenerSucursales,
 } from "@/lib/servicios/usuarios";
 import type { Usuario } from "@/tipos/database";
-import { useRol } from "@/context/rol-context";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
+import { coincide } from "@/lib/vistas/presentacion";
 async function cargar() {
   const [usuarios, perfiles, sucursales] = await Promise.all([
     obtenerUsuarios(),
@@ -21,19 +22,20 @@ async function cargar() {
   return { usuarios, perfiles, sucursales };
 }
 export default function UsuariosPage() {
-  const { perfilActual } = useRol();
   const consulta = useConsulta(cargar);
   const [texto, setTexto] = useState("");
   const [rol, setRol] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | undefined>();
+  const limpiar = () => {
+    setTexto("");
+    setRol("");
+  };
   const filas =
     consulta.datos?.usuarios.filter(
       (u) =>
         (!rol || u.perfil?.nombre === rol) &&
-        [u.nombre, u.email].some((v) =>
-          v.toLowerCase().includes(texto.toLowerCase()),
-        ),
+        coincide(texto, u.nombre, u.email),
     ) ?? [];
   return (
     <TransicionPagina>
@@ -41,12 +43,11 @@ export default function UsuariosPage() {
         titulo="Equipo y permisos"
         subtitulo="Cuentas institucionales, roles y asignación de sucursales."
       />
-      {perfilActual.accesoLocal && (
-        <p className="mb-4 text-sm text-muted">
-          Se consultan los usuarios de Supabase. El acceso temporal no permite
-          crear, editar ni cambiar credenciales de cuentas institucionales.
-        </p>
-      )}
+      <p className="mb-4 text-sm text-muted">
+        ADMIN tiene alcance general sobre las sucursales. BODEGUERO y AUXILIAR
+        operan en su sucursal asignada. Un gerente de sucursal es una propuesta
+        pendiente; no está habilitado como permiso.
+      </p>
       <div className="flex flex-wrap gap-3">
         <input
           aria-label="Buscar usuarios"
@@ -67,17 +68,33 @@ export default function UsuariosPage() {
           ))}
         </select>
         <button
-          disabled={!consulta.datos || perfilActual.accesoLocal}
+          disabled={!consulta.datos}
           className="boton-primario"
           onClick={() => {
             setUsuario(undefined);
             setAbierto(true);
           }}
         >
-          + Nuevo usuario
+          {"+ Nuevo usuario"}
         </button>
       </div>
-      <EstadoDatos {...consulta} vacio={!filas.length} />
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={filas.length}
+          total={consulta.datos.usuarios.length}
+          unidad="registros del equipo"
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+          limpiar={limpiar}
+        />
+      )}
+      <EstadoDatos
+        {...consulta}
+        vacio={!filas.length}
+        filtrado={Boolean(texto || rol)}
+        limpiar={limpiar}
+      />
       {consulta.datos &&
         !consulta.cargando &&
         !consulta.error &&
@@ -101,34 +118,44 @@ export default function UsuariosPage() {
                     <td>{u.email}</td>
                     <td>
                       <span className="rounded-lg bg-acento-suave px-2 py-1 text-xs text-acento">
-                        {u.perfil?.nombre}
+                        {u.perfil?.nombre === "ADMIN"
+                          ? "Administrador general"
+                          : u.perfil?.nombre}
                       </span>
                     </td>
-                    <td>{u.sucursal?.nombre || "Todas"}</td>
+                    <td>
+                      {u.perfil?.nombre === "ADMIN"
+                        ? "Todas las sucursales · alcance administrativo"
+                        : u.sucursal?.nombre || "Sin sucursal asignada"}
+                    </td>
                     <td
                       className={
-                        u.activo
+                        u.auth_vinculado && u.activo
                           ? "text-emerald-700 dark:text-emerald-300"
                           : "text-red-700 dark:text-red-300"
                       }
                     >
-                      {u.activo ? "Activo" : "Inactivo"}
+                      {!u.auth_vinculado
+                        ? "Histórico · sin acceso"
+                        : u.activo
+                          ? "Activo"
+                          : "Inactivo"}
                     </td>
                     <td>
                       <button
-                        disabled={perfilActual.accesoLocal}
+                        disabled={!u.auth_vinculado}
                         title={
-                          perfilActual.accesoLocal
-                            ? "Cuenta temporal fija"
+                          !u.auth_vinculado
+                            ? "Autor histórico sin cuenta Auth. Se conserva su trazabilidad."
                             : undefined
                         }
-                        className="font-medium text-acento"
+                        className="boton-secundario"
                         onClick={() => {
                           setUsuario(u);
                           setAbierto(true);
                         }}
                       >
-                        Editar
+                        {"Editar"}
                       </button>
                     </td>
                   </tr>

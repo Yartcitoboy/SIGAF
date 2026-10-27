@@ -14,9 +14,22 @@ export function obtenerPerfiles(): Promise<Perfil[]> {
 export function obtenerSucursales(): Promise<Sucursal[]> {
   return leerTabla("sucursal");
 }
-export async function obtenerUsuarios(): Promise<Usuario[]> {
+export async function obtenerUsuarios(): Promise<
+  (Usuario & { auth_vinculado: boolean })[]
+> {
   const [usuarios, perfiles, sucursales] = await Promise.all([
-    leerTabla("usuario"),
+    (async () => {
+      const respuesta = await fetch("/api/usuarios", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const datos = await respuesta.json();
+      if (!respuesta.ok)
+        throw new Error(
+          datos.error || "No se pudieron consultar las cuentas reales.",
+        );
+      return datos as (Usuario & { auth_vinculado: boolean })[];
+    })(),
     obtenerPerfiles(),
     obtenerSucursales(),
   ]);
@@ -24,6 +37,14 @@ export async function obtenerUsuarios(): Promise<Usuario[]> {
     ...u,
     perfil: perfiles.find((p) => p.id_perfil === u.id_perfil),
     sucursal: sucursales.find((s) => s.id_sucursal === u.id_sucursal),
+  }));
+}
+// Directorio mínimo para atribución de movimientos; conserva los permisos y la
+// proyección segura de /api/datos. Si no hay acceso, la vista conserva el UUID.
+export async function obtenerResponsables() {
+  return (await leerTabla("usuario")).map(({ id_usuario, nombre }) => ({
+    id_usuario,
+    nombre,
   }));
 }
 async function solicitar(datos: object, metodo: "POST" | "PATCH") {

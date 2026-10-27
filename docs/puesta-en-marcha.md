@@ -1,125 +1,73 @@
-# Activación de SIGAF
+# Puesta en marcha con Supabase real
 
-La aplicación consulta la base Supabase existente, sin exigir las migraciones nuevas. El acceso institucional obtiene el rol desde `public.usuario`. Las tres tarjetas temporales también consultan Supabase, pero solo en lectura.
+Actualizado el 27 de octubre de 2026. Sustituye las instrucciones anteriores de acceso temporal.
 
-## Acceso local temporal
+## Acceso y configuración obligatorios
 
-En este checkout está activado en `.env.local`. Iniciar con `npm run dev` y abrir `http://localhost:3000/login`: las tarjetas **Admin**, **Bodega** y **Auxiliar** completan el formulario; después se pulsa **Iniciar sesión**. No se crean usuarios en Supabase. La sesión local se firma en el servidor, dura ocho horas y permite navegar según los permisos del perfil seleccionado.
+El Login requiere una cuenta real de Supabase Auth, activa y vinculada con el mismo UUID a `public.usuario`, y un perfil válido en `public.perfil`. Una fila antigua de usuario no equivale a una cuenta Auth. No se crean identidades, contraseñas o saldos de demostración.
 
-Las tarjetas ya no consultan ni crean datos de ejemplo en `.sigaf-local`. Los datos locales anteriores se conservan sin borrarlos, pero la aplicación no los utiliza. El catálogo se obtiene de `public.producto` mediante la clave pública ya configurada; no se usa `service_role`, no se omiten políticas RLS y no se cambian credenciales.
+La app conserva la URL y clave pública del proyecto. Se eliminaron las variables, tarjetas, endpoint y firmas del acceso temporal. Las cookies de Supabase siguen transportando la sesión autenticada; no almacenan un catálogo o inventario alternativo.
 
-La sesión temporal se valida en el servidor y solo admite comandos de lectura. Los perfiles operativos se limitan a su sucursal; el catálogo es común. No se puede modificar stock, marcar alertas, editar productos ni cambiar usuarios con estas tarjetas. Los informes pueden descargarse sin insertar registros de emisión. Las consultas usan únicamente los permisos existentes de la clave pública: si Supabase restringe una lectura, la web no eleva privilegios ni vuelve a datos locales.
+Si falta una tabla, la política de vencimiento o el contexto operativo, la pantalla informa el error. No inventa umbrales, fechas ni datos para continuar.
 
-Si falta únicamente `configuracion` (`PGRST205`/`42P01`), la vista usa los umbrales originales de `001_initial_schema.sql`: 7 y 30 días, sin holgura. Se indica con `esquema_original`, un metadato de la vista, no una columna SQL. No se crea ninguna tabla ni se simula una configuración guardada. Los errores de permisos, red u otras tablas se muestran y no se ocultan. Los campos ausentes (costos, ISP, clasificación de salas) no se inventan. Las operaciones de stock que requieren las funciones nuevas permanecen deshabilitadas en el esquema original.
+## Preparar el esquema
 
-Si Turbopack falla al iniciar los procesos de estilos en Windows, utilizar `npm run dev -- --webpack`; la compilación alternativa se ejecuta con `npm run build -- --webpack`.
+1. Revisar el esquema real y el historial de migraciones con acceso administrativo al proyecto correcto.
+2. En una base nueva, aplicar primero `001_initial_schema.sql`. En una base existente no volver a ejecutar el esquema inicial.
+3. Aplicar solamente las migraciones pendientes, en orden. Los archivos que crean políticas o tablas se ejecutan una sola vez. No usar un comando de publicación sin conciliar antes el historial. La correspondencia de este proyecto está en `supabase/aplicacion-remota-2026-10-27.json`.
+4. Crear o verificar la primera cuenta Auth y su perfil ADMIN en `public.usuario`. Conservar los autores históricos; no cambiar UUIDs o correos de registros existentes para simular una vinculación.
+5. Revisar las sucursales y marcar explícitamente las salas de ventas desde Configuración. No se clasifica una bodega por su nombre.
+6. Abrir el Login con esa cuenta y verificar cada módulo con el alcance autorizado.
 
-Para retirarlo al pasar a pruebas, cambiar `SIGAF_ACCESO_LOCAL=false` en `.env.local` y reiniciar desarrollo. Las tarjetas desaparecen y las sesiones locales dejan de admitirse. En una compilación de producción el acceso local siempre está deshabilitado, incluso si la variable está en `true`.
+En el proyecto `nkqxhpiagkcfvxbytarn` ya se aplicaron 002–006 y las migraciones `seguridad_cuentas_reales`, `optimizar_politicas_sesion` y `proteger_ultimo_admin_real`, después de comparar el esquema existente. No repetirlas ni ejecutar 001 en esta base. Todas las tablas públicas tienen RLS. Las cuentas existentes `admin@gmail.com` y `admin.sigaf@local.com` tienen acceso Admin global por autorización expresa. Los tres autores históricos siguen conservados sin acceso Auth y no cuentan como respaldo del último Admin real.
 
-El secreto `SIGAF_LOCAL_SESSION_SECRET` se conserva solo en `.env.local`, fuera de Git. Si se prepara otro checkout, generar uno aleatorio de al menos 32 caracteres y activar `SIGAF_ACCESO_LOCAL=true`. Las tarjetas y credenciales ficticias están centralizadas en `src/lib/auth/cuentas-locales.ts` para su futura eliminación.
+La ubicación existente “Sala de Ventas - Vitrina Prioritaria”, descrita como punto de atención al público, está clasificada como sala de ventas. No se movieron existencias. Los umbrales existentes se conservaron: 7 días críticos, 30 preventivos, holgura 0.
 
-## Apariencia por rol
+## Importar el catálogo oficial
 
-Cada perfil tiene su paleta propia, aplicada a todas sus pantallas, formularios y diálogos. El botón de sol/luna del encabezado alterna claro y oscuro sin recargar. La elección se guarda durante un año en una cookie de preferencia independiente por rol (`sigaf_tema_admin`, `sigaf_tema_bodeguero`, `sigaf_tema_auxiliar`) y se aplica desde el primer renderizado; el modo inicial es claro. Las cookies de apariencia no otorgan permisos. Los colores están centralizados en `src/lib/tema/paletas.ts`; los colores sanitarios del semáforo se conservan.
+En este proyecto ya se ejecutó `supabase/importaciones/2026-10-27_catalogo_isp.sql`: 198 productos añadidos, 214 totales, sin registros sanitarios duplicados. Procede del [registro sanitario oficial del ISP](https://registrosanitario.ispch.gob.cl/), filtrado por Vigente, consultado el 27-10-2026. El SQL se conserva para trazabilidad y futuras bases; no hace falta repetir la importación en esta base.
 
-## Migraciones opcionales (no necesarias para consultar la base existente)
+La selección contiene 198 registros sanitarios distintos de ocho búsquedas por nombre: paracetamol, ibuprofeno, amoxicilina, loratadina, losartán, omeprazol, metformina y cetirizina. No representa todo el registro nacional.
 
-La comprobación de solo lectura del 23 de octubre de 2026 confirmó 16 productos en la base configurada y la ausencia de `configuracion`. No se aplicaron cambios al servicio remoto. La consulta del esquema actual funciona sin aplicar los archivos siguientes. Solo deben evaluarse si ambos colaboradores deciden ampliar el esquema y sus políticas.
+La importación añade los registros que faltan y omite un registro sanitario ya existente. No sobrescribe fichas, elimina productos o modifica existencias. Los datos que el listado no aporta quedan NULL: GTIN, presentación y vida útil. La presentación debe completarse desde el envase antes de recibir stock.
 
-En una base que ya tiene las tablas de `001_initial_schema.sql`, aplicar en el SQL Editor de Supabase, en este orden:
+La fecha de registro ISP, la fecha de consulta y la fecha de importación son datos separados. Ninguna se utiliza como vencimiento de un lote. La vigencia es la observada al consultar el ISP, no una supervisión continua de alertas o retiros.
 
-1. `supabase/migrations/002_operacion_segura.sql`
-2. `supabase/migrations/003_resumenes_correo.sql`
-3. `supabase/migrations/004_proteger_administracion.sql`
+Se verificaron 19 lotes, 19 existencias y 2.275 unidades, iguales que antes de importar; se conservaron los 10 movimientos y las 3 mermas.
 
-En una base nueva ejecutar primero `001_initial_schema.sql`. No volver a ejecutar la migración inicial sobre tablas existentes. Los archivos 002-004 se ejecutan una sola vez y dentro de transacciones; se probaron contra PostgreSQL aislado con PGlite. En un proyecto ya administrado por Supabase CLI, conciliar el historial de migraciones antes de utilizar `supabase db push`.
+## Conexión de módulos
 
-Los archivos `seed.sql` y `seed_ampliado.sql` son antecedentes de demostración: no ejecutarlos en producción ni usarlos para crear cuentas de acceso. Los movimientos históricos no se reasignan automáticamente a cuentas nuevas.
+| Módulo | Fuente u operación real |
+| --- | --- |
+| Login y sesión | Supabase Auth, usuario y perfil. |
+| Dashboard e Inventario | Tablas operativas, configuración y contexto PostgreSQL. |
+| Productos | Lectura y guardado del catálogo en producto y categoría. |
+| Lotes y recepción | RPC transaccional recibir_lote. |
+| Movimientos, mermas y traslados | RPC operar_stock con responsable autenticado. |
+| Dispensación | FEFO sobre datos autorizados; confirmación con operar_stock. |
+| Alertas y campana | Notificaciones del usuario real; marcado de lectura con alcance de destinatario. |
+| Reportes | Datos de Supabase; emisión con autor de la sesión y fecha por defecto de PostgreSQL. |
+| Usuarios | API web y función protegida sigaf-usuarios, versión 1 activa en Supabase; comprueba Auth y ADMIN activo. |
+| Configuración | Configuración, farmacia, sucursal y bodega. |
+| Apariencia | Preferencia del usuario en preferencia_usuario. |
+| Mensajes | Solo interfaz solicitada; envío deshabilitado y sin conversaciones ficticias. |
 
-### Primera cuenta administradora
-
-Crear la cuenta real en Supabase **Authentication > Users**. Usar el mismo UUID de Auth en `public.usuario`; una fila de usuario con UUID aleatorio no puede iniciar sesión. Para un correo real nuevo, después de crear la cuenta en Auth, adaptar y ejecutar:
-
-```sql
-DO $$
-DECLARE
-  correo text := 'reemplazar-por-correo-real';
-  identidad uuid;
-  perfil_admin int;
-BEGIN
-  SELECT id INTO identidad FROM auth.users WHERE email=correo;
-  IF identidad IS NULL THEN RAISE EXCEPTION 'Crea primero la cuenta en Supabase Auth'; END IF;
-  SELECT id_perfil INTO perfil_admin FROM public.perfil WHERE nombre='ADMIN' ORDER BY id_perfil LIMIT 1;
-  IF perfil_admin IS NULL THEN
-    INSERT INTO public.perfil(nombre) VALUES ('ADMIN') RETURNING id_perfil INTO perfil_admin;
-  END IF;
-  INSERT INTO public.usuario(id_usuario,nombre,email,id_perfil,id_sucursal,activo)
-  VALUES(identidad,'Administrador de farmacia',correo,perfil_admin,NULL,true)
-  ON CONFLICT(id_usuario) DO UPDATE SET id_perfil=perfil_admin,activo=true;
-END $$;
-```
-
-Si el correo ya pertenece a un perfil de demostración con otro UUID, resolver esa asociación conservando los autores de la auditoría histórica. No reemplazar UUIDs indiscriminadamente. Las siguientes cuentas se crean desde el módulo Usuarios.
+El servidor exige sesión real y mantiene filtros de rol/sucursal y proyección de usuarios sin hashes, además de RLS. Ocultar enlaces del menú no sustituye estos controles.
 
 ## Variables del servidor
 
-Mantener los valores públicos existentes en `.env.local` y completar los nombres de `.env.example`:
+Conservar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Para las funciones correspondientes también se requieren:
 
-| Variable | Uso |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave pública; los permisos efectivos están en RLS |
-| `SUPABASE_SERVICE_ROLE_KEY` | Solo servidor: administración de Auth y cron |
-| `RESEND_API_KEY` | Envío de resúmenes |
-| `RESEND_FROM` | Remitente de un dominio verificado en Resend |
-| `CRON_SECRET` | Secreto aleatorio de al menos 24 caracteres |
+- `SUPABASE_SERVICE_ROLE_KEY`: exclusivamente en servidor para el proceso de cron/correos. Usuarios utiliza las claves administradas en su función de Supabase y no necesita esta variable local. Nunca utilizar NEXT_PUBLIC ni publicarla en Git.
+- `CRON_SECRET`: protección del proceso programado de alertas.
+- `RESEND_API_KEY` y `RESEND_FROM`: entrega de correos.
 
-La clave de servicio nunca se importa en componentes cliente. No guardar secretos en Git. Reiniciar el servidor después de cambiar variables; las variables `NEXT_PUBLIC_*` requieren una nueva compilación de producción.
+No pegar secretos en el chat. Configurarlos mediante el mecanismo seguro del entorno. Cron y Resend no están configurados ni programados automáticamente. Ya se generaron 14 alertas internas para las cuentas reales, sin enviar correos. Mensajes sigue siendo solo interfaz básica con envío deshabilitado.
 
-## Datos maestros y recepción
+## Validación y trabajo compartido
 
-Desde Configuración registrar razón social, RUT, dirección, director técnico y logo PNG/JPG. Crear sucursales y bodegas con ubicación física. Marcar explícitamente las vitrinas o estantes habilitados como **sala de ventas**; ninguna bodega se habilita por su nombre automáticamente.
+Ejecutar revisión de código, tipos, pruebas y compilación antes de confirmar cambios. Las pruebas de PostgreSQL usan un motor aislado en memoria; sus cuentas, fechas y existencias solo pertenecen a las pruebas y no alimentan la aplicación ni se envían a Supabase.
 
-Crear categorías de productos si la base todavía no tiene ninguna. El catálogo permite registrar nombre, principio activo, código real del envase, referencia ISP y vida útil en meses. El personal de bodega puede consultar el catálogo; solo ADMIN puede modificarlo.
+Comprobar después con cuentas reales: acceso por rol, separación de sucursales, lectura del catálogo, altas, recepción, FEFO, traslado conservando stock, merma con motivo, notificaciones y reportes. No usar la base compartida para movimientos de prueba sin acordar el entorno y los datos con el equipo.
 
-En Recepción, GS1 admite AI 01 (GTIN), 10 (lote), 17 (vencimiento) y omite AI 21 (serie). Soporta notación con paréntesis y separador GS transmitido por la pistola. Un EAN/UPC simple identifica el producto y exige transcribir lote y fecha del envase. No se generan códigos ni lotes ficticios. Se rechazan los días de fecha no especificados y los identificadores sin soporte.
-
-## Reglas de stock
-
-- El día se calcula en `America/Santiago`, con diferencias de calendario independientes del horario de verano.
-- La fecha de vencimiento igual o anterior a hoy queda bloqueada, según el requisito del proyecto. Por defecto: crítico hasta 45 días, preventivo hasta 90, vigente por encima de 90. Los umbrales se guardan en PostgreSQL.
-- La holgura también se verifica en SQL. Solo se dispensa desde ubicaciones de sala de ventas y por el primer lote elegible de la sucursal, desempatando por ingreso e identificador.
-- Recepción, merma, traslado y dispensación son funciones transaccionales. Los usuarios autenticados no pueden modificar stock directamente. Cada operación usa una clave UUID para evitar dobles descuentos en reintentos. Reusar una clave con otros datos produce un error.
-- El auxiliar no puede registrar mermas ni traslados y no recibe acceso de lectura al libro de movimientos. El personal operativo solo accede a su sucursal.
-- Los costos históricos ausentes se muestran como valoración parcial, no como costos conocidos iguales a cero.
-- Las vistas actualizan datos al recuperar el foco y cada 30 segundos mientras están visibles. PostgreSQL vuelve a comprobar stock, permisos y FEFO en cada operación.
-
-## Cron de vencimientos
-
-Configurar un planificador externo que haga **GET** a `/api/cron/verificar-vencimientos` con `Authorization: Bearer <CRON_SECRET>`. Una ejecución cada 15 minutos sirve como punto de partida; ajustar a la cantidad de destinatarios. El código no instala un planificador ni envía correos durante las pruebas.
-
-El cron registra una alerta por usuario/lote/fecha/estado. ADMIN recibe todas las alertas; BODEGUERO las de su sucursal; AUXILIAR solo las de sala de ventas y sin correo. Las alertas nuevas de ADMIN/BODEGUERO se agrupan en un resumen persistente por destinatario.
-
-Se reservan hasta 6 resúmenes por ejecución, en tandas de 2. La reserva temporal evita que dos ejecuciones reclamen el mismo trabajo. El destinatario, mensaje y clave de idempotencia permanecen estables durante los reintentos. Los errores quedan visibles en Alertas; se reintenta después de 15 minutos, hasta 5 veces. Un resultado ambiguo con más de 23 horas desde el primer intento, una cuenta inactiva o un correo cambiado pasa a `REVISION`, sin reenviarse automáticamente. Revisar el historial del proveedor antes de intervenir una entrega en ese estado. La atención de una alerta y su estado de correo son datos separados.
-
-El estado `ENVIADO` indica aceptación de Resend, no confirmación de lectura ni entrega final al buzón. Fuente: [idempotencia de Resend](https://resend.com/docs/dashboard/emails/idempotency-keys).
-
-## Reportes e ISP
-
-PDF y Excel usan exclusivamente los registros consultados de Supabase y el alcance seleccionado de farmacia/sucursal/bodega. En inventario, las fechas filtran vencimientos; en movimientos y mermas, la fecha de operación. La exportación conjunta incluye inventario, mermas y movimientos, y registra la emisión. La paginación de consultas evita el recorte silencioso a 1.000 filas de PostgREST.
-
-El PDF incorpora membrete, logo configurado, filtros, paginación y espacio de firma. El acta de merma tiene un campo de disposición final/destrucción por completar: una baja informática no acredita una destrucción realizada ni constituye certificación del ISP.
-
-El servicio `isp.ts` valida el formato, construye el enlace a la ficha pública y coteja fabricación/vencimiento contra los meses registrados. **No confirma automáticamente vigencia ni vida útil con una API del ISP.** Esos valores se transcriben después de comprobar la ficha/resolución oficial. No se inventa un servicio externo ni se afirma cumplimiento legal automático. Fuentes: [registro sanitario ISP](https://www.ispch.gob.cl/anamed/medicamentos/registro-sanitario-de-productos-farmaceuticos/), [identificadores GS1](https://ref.gs1.org/ai/).
-
-## Comprobaciones
-
-```sh
-npm test
-npm run lint
-npm run build
-```
-
-Las pruebas usan exclusivamente PostgreSQL en memoria, cuentas y productos de prueba locales, sin modificar Supabase ni enviar correos. Cubren migraciones, RLS, FEFO, vencimiento de hoy, holgura, idempotencia, traslados, mermas, usuario inactivo, último administrador, cola de correo, fechas chilenas, GS1, vida útil, filtros, Excel reabierto y PDF paginado. La prueba visual del informe se generó separadamente; no forma parte del inventario real.
-
-La autenticación de extremo a extremo y las entregas de Resend requieren aplicar las migraciones, completar los secretos y disponer de una cuenta real. No se realizaron commits automáticos.
+Todo el trabajo queda en la rama local actual. No se crean commits ni se publica el repositorio automáticamente.

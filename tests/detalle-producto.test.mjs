@@ -205,7 +205,7 @@ test("detalle: agotado, bloqueado por fecha y disponibilidad no se confunden", (
   assert.equal(
     prepararDetalleProducto(datos, categorias, { tipo: "producto", id: 1 }, hoy)
       .estado,
-    "Bloqueado por vencimiento",
+    "Bloqueado por fecha u holgura",
   );
   datos.inventario[2].stock_actual = 0;
   const agotado = prepararDetalleProducto(

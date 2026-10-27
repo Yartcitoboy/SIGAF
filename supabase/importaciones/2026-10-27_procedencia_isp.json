@@ -1,0 +1,36 @@
+{
+  "fuente": "https://registrosanitario.ispch.gob.cl/",
+  "fecha_consulta": "2026-10-27",
+  "criterio_estado": "Vigente",
+  "registros": 198,
+  "busquedas": [
+    "AMOXICILINA",
+    "CETIRIZINA",
+    "IBUPROFENO",
+    "LORATADINA",
+    "LOSART",
+    "METFORMINA",
+    "OMEPRAZOL",
+    "PARACETAMOL"
+  ],
+  "sha256_respuestas_publicas": {
+    "AMOXICILINA": "bb8781caf41eaff46ab19dea9db334304e2b3c25bb348e898352f20b86d1985a",
+    "CETIRIZINA": "189d8ea7761572f1bef5defe7d7865411633e6be5e2c1fd0efe4441400c15b1a",
+    "IBUPROFENO": "97617e92784e22684e42d063dc6cd53f8b42a1c78973954bb75c74827fa2ea94",
+    "LORATADINA": "b142ce35f1cc0f246ad492bcd1998e82e292e56370dcebf7a917f51c1b198806",
+    "LOSART": "6051966eee12611a999b8d5cd669f821575621428191e45a69a77f3603b1708d",
+    "METFORMINA": "edb41870e03ad850146c21a9230bc8f3a49224c0a92ad4ac344273dfc1997511",
+    "OMEPRAZOL": "d7034d6af7f8d70427a4f859b650ad2829fe499a481e46c757b661b4bdde545a",
+    "PARACETAMOL": "1b66a4c6571c45f3a0404ac4549b13f660f5fe8e47206be9d474e9fe95f4da91"
+  },
+  "sha256_sql": "033cde403471c30c25c4619772acc95f205d34e63b4ef5d0b81ad396d03ad058",
+  "estado_importacion": "APLICADA y verificada en Supabase",
+  "proyecto": "nkqxhpiagkcfvxbytarn",
+  "fecha_aplicacion_chile": "2026-10-27",
+  "productos_agregados": 198,
+  "productos_previos": 16,
+  "productos_totales_verificados": 214,
+  "registros_sanitarios_duplicados": 0,
+  "lotes_creados_por_importacion": 0,
+  "unidades_creadas_por_importacion": 0
+}

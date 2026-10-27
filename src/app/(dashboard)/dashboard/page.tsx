@@ -1,4 +1,6 @@
 "use client";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header } from "@/componentes/layout/header";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
@@ -8,6 +10,16 @@ import { obtenerOperacion } from "@/lib/servicios/operacion";
 import { DashboardAdminView } from "@/componentes/dashboard/dashboard-admin-view";
 import { DashboardBodegueroView } from "@/componentes/dashboard/dashboard-bodeguero-view";
 import { DashboardAuxiliarView } from "@/componentes/dashboard/dashboard-auxiliar-view";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
+function AvisoAcceso() {
+  const parametros = useSearchParams();
+  return parametros.get("acceso") === "denegado" ? (
+    <p role="alert" className="panel mb-4 text-sm">
+      Tu rol no tiene acceso a la pantalla solicitada. Volviste a tu dashboard;
+      tus permisos no se han cambiado.
+    </p>
+  ) : null;
+}
 export default function DashboardPage() {
   const { rolActual } = useRol();
   const consulta = useConsulta(obtenerOperacion);
@@ -22,6 +34,19 @@ export default function DashboardPage() {
         titulo={titulos[rolActual]}
         subtitulo="Stock, lotes y decisiones basadas en los registros de tu farmacia."
       />
+      <Suspense fallback={null}>
+        <AvisoAcceso />
+      </Suspense>
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={consulta.datos.inventario.length}
+          total={consulta.datos.inventario.length}
+          unidad="existencias por lote y ubicación"
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+        />
+      )}
       <EstadoDatos
         {...consulta}
         vacio={consulta.datos?.inventario.length === 0}

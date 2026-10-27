@@ -1,10 +1,19 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
+import { DetalleProducto } from "@/componentes/productos/detalle-producto";
+import { resumirStock, diaMovimiento } from "@/lib/vistas/presentacion";
 import { MapPin } from "lucide-react";
 import type { DatosOperacion } from "@/lib/servicios/operacion";
-import { fechaChile } from "@/lib/servicios/fechas";
 import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
 import { Metrica } from "./metricas";
 export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
+  const [detalle, setDetalle] = useState<number | null>(null);
+  const stock = resumirStock(
+    datos.inventario,
+    datos.hoy,
+    datos.configuracion.holgura_dias,
+  );
   const pendientes = datos.inventario
     .filter(
       (i) =>
@@ -28,12 +37,13 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
           )}
         />
         <Metrica
-          titulo="Stock bajo custodia"
+          titulo="Stock físico bajo custodia"
           valor={
             datos.inventario
               .reduce((a, i) => a + i.stock_actual, 0)
               .toLocaleString("es-CL") + " un."
           }
+          detalle={`${stock.aptoPorFecha} aptas por fecha · ${stock.bloqueado} bloqueadas. Revisar presentación antes de operar.`}
         />
         <Metrica
           titulo="Recepciones de hoy"
@@ -41,19 +51,17 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
             datos.movimientos.filter(
               (m) =>
                 m.tipo_movimiento === "ENTRADA" &&
-                fechaChile(
-                  new Date(m.fecha.endsWith("Z") ? m.fecha : m.fecha + "Z"),
-                ) === fechaChile(),
+                diaMovimiento(m.fecha) === datos.hoy,
             ).length,
           )}
         />
       </div>
       <div className="flex flex-wrap gap-3">
-        <Link className="boton-primario" href="/lotes?recepcion=1">
-          Recepción de lote
+        <Link className="boton-primario" href={"/lotes?recepcion=1"}>
+          {"Recepción de lote"}
         </Link>
-        <Link className="boton-secundario" href="/movimientos?tipo=MERMA">
-          Baja a merma
+        <Link className="boton-secundario" href={"/movimientos?tipo=MERMA"}>
+          {"Baja a merma"}
         </Link>
       </div>
       <section className="panel">
@@ -85,17 +93,13 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
               </div>
               <div className="flex items-center gap-3">
                 <SemaforoBadge estado={i.estado_semaforo} />
-                <Link
-                  className="text-sm font-semibold text-acento"
-                  href={
-                    "/movimientos?tipo=" +
-                    (i.estado_semaforo === "VENCIDO" ? "MERMA" : "TRASLADO") +
-                    "&inventario=" +
-                    i.id_inventario
-                  }
+                <button
+                  type="button"
+                  className="boton-secundario"
+                  onClick={() => setDetalle(i.id_lote)}
                 >
-                  {i.estado_semaforo === "VENCIDO" ? "Retirar →" : "Reubicar →"}
-                </Link>
+                  Revisar lote
+                </button>
               </div>
             </article>
           ))}
@@ -106,6 +110,13 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
           )}
         </div>
       </section>
+      {detalle !== null && (
+        <DetalleProducto
+          referencia={{ tipo: "lote", id: detalle }}
+          datos={datos}
+          cerrar={() => setDetalle(null)}
+        />
+      )}
     </div>
   );
 }

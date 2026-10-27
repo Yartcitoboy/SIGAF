@@ -31,11 +31,23 @@ function Formulario({
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reset, setReset] = useState(false);
+  const [perfilId, setPerfilId] = useState(String(usuario?.id_perfil || ""));
+  const esAdmin =
+    perfiles.find((p) => String(p.id_perfil) === perfilId)?.nombre === "ADMIN";
   async function guardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setOcupado(true);
     setError(null);
     const f = new FormData(e.currentTarget);
+    if (
+      !reset &&
+      (!String(f.get("nombre") || "").trim() ||
+        !perfilId ||
+        (!esAdmin && !f.get("sucursal")))
+    ) {
+      setError("Indica nombre, rol y una sucursal para el personal operativo.");
+      return;
+    }
+    setOcupado(true);
     try {
       if (reset && usuario) {
         await restablecerPassword(
@@ -79,115 +91,132 @@ function Formulario({
       cerrar={alCerrar}
       ocupado={ocupado}
     >
-      <form onSubmit={guardar} className="space-y-4">
-        {!reset && (
-          <>
-            <label className="block text-sm">
-              Nombre completo
-              <input
-                name="nombre"
-                required
-                minLength={2}
-                maxLength={120}
-                defaultValue={usuario?.nombre}
-                className="campo mt-1"
-              />
-            </label>
-            <label className="block text-sm">
-              Correo
-              <input
-                name="email"
-                type="email"
-                required
-                defaultValue={usuario?.email}
-                className="campo mt-1"
-              />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-sm">
-                Rol
-                <select
-                  name="perfil"
+      <form onSubmit={guardar}>
+        <fieldset disabled={ocupado} className="min-w-0 space-y-4">
+          {!reset && (
+            <>
+              <label className="block text-sm">
+                Nombre completo
+                <input
+                  name="nombre"
                   required
-                  defaultValue={usuario?.id_perfil || ""}
+                  minLength={2}
+                  maxLength={120}
+                  defaultValue={usuario?.nombre}
                   className="campo mt-1"
-                >
-                  <option value="">Seleccionar rol</option>
-                  {perfiles.map((p) => (
-                    <option key={p.id_perfil} value={p.id_perfil}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
-              <label className="text-sm">
-                Sucursal
-                <select
-                  name="sucursal"
-                  defaultValue={usuario?.id_sucursal || ""}
+              <label className="block text-sm">
+                Correo
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  defaultValue={usuario?.email}
                   className="campo mt-1"
-                >
-                  <option value="">Todas (solo ADMIN)</option>
-                  {sucursales.map((s) => (
-                    <option key={s.id_sucursal} value={s.id_sucursal}>
-                      {s.nombre}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="activo"
-                defaultChecked={usuario?.activo ?? true}
-              />
-              Cuenta activa
-            </label>
-          </>
-        )}
-        {(!usuario || reset) && (
-          <label className="block text-sm">
-            {reset ? "Nueva contraseña" : "Contraseña inicial"}
-            <input
-              name="password"
-              type="password"
-              minLength={12}
-              maxLength={128}
-              required
-              autoComplete="new-password"
-              className="campo mt-1"
-            />
-            <span className="text-xs text-muted">Mínimo 12 caracteres.</span>
-          </label>
-        )}
-        {error && (
-          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-            {error}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-3">
-          <button disabled={ocupado} className="boton-primario">
-            {ocupado
-              ? "Guardando…"
-              : reset
-                ? "Restablecer contraseña"
-                : "Guardar cuenta"}
-          </button>
-          {usuario && (
-            <button
-              type="button"
-              disabled={ocupado}
-              onClick={() => {
-                setReset(!reset);
-                setError(null);
-              }}
-              className="boton-secundario"
-            >
-              {reset ? "Volver a edición" : "Cambiar contraseña"}
-            </button>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-sm">
+                  Rol
+                  <select
+                    name="perfil"
+                    aria-label="Rol de la cuenta"
+                    required
+                    value={perfilId}
+                    onChange={(e) => setPerfilId(e.target.value)}
+                    className="campo mt-1"
+                  >
+                    <option value="">Seleccionar rol</option>
+                    {perfiles.map((p) => (
+                      <option key={p.id_perfil} value={p.id_perfil}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm">
+                  Sucursal
+                  <select
+                    name="sucursal"
+                    aria-label="Sucursal de la cuenta"
+                    required={!esAdmin}
+                    defaultValue={usuario?.id_sucursal || ""}
+                    className="campo mt-1"
+                  >
+                    <option value="">
+                      {esAdmin
+                        ? "Todas las sucursales"
+                        : "Selecciona una sucursal"}
+                    </option>
+                    {sucursales.map((s) => (
+                      <option key={s.id_sucursal} value={s.id_sucursal}>
+                        {s.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="text-xs text-muted">
+                {esAdmin
+                  ? "Alcance general actual: seleccionar una sucursal de referencia no limita los permisos de ADMIN."
+                  : "Acceso operativo de la sucursal seleccionada. No otorga administración de otras sucursales."}{" "}
+                Los permisos reales los verifica el backend; esta vista no crea
+                roles nuevos.
+              </p>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name="activo"
+                  defaultChecked={usuario?.activo ?? true}
+                />
+                Cuenta activa
+              </label>
+            </>
           )}
-        </div>
+          {(!usuario || reset) && (
+            <label className="block text-sm">
+              {reset ? "Nueva contraseña" : "Contraseña inicial"}
+              <input
+                name="password"
+                type="password"
+                minLength={12}
+                maxLength={128}
+                required
+                autoComplete="new-password"
+                className="campo mt-1"
+              />
+              <span className="text-xs text-muted">Mínimo 12 caracteres.</span>
+            </label>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button disabled={ocupado} className="boton-primario">
+              {ocupado
+                ? "Guardando…"
+                : reset
+                  ? "Restablecer contraseña"
+                  : "Guardar cuenta"}
+            </button>
+            {usuario && (
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={() => {
+                  setReset(!reset);
+                  setError(null);
+                }}
+                className="boton-secundario"
+              >
+                {reset ? "Volver a edición" : "Cambiar contraseña"}
+              </button>
+            )}
+          </div>
+        </fieldset>
       </form>
     </Dialogo>
   );

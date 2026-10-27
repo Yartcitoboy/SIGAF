@@ -1,8 +1,6 @@
 import { comandoDatos, TABLAS, validarCampos } from "@/lib/datos/contrato";
 import { autorizar, ErrorHttp, respuestaError } from "@/lib/autorizacion";
-import { obtenerSesionLocal } from "@/lib/auth/local-server";
 import { leerSupabaseExistente } from "@/lib/datos/supabase-existente";
-import { crearClienteLectura } from "@/lib/supabase/lectura";
 import type { Database } from "@/tipos/database";
 
 export const runtime = "nodejs";
@@ -15,25 +13,26 @@ export async function POST(request: Request) {
     if (!entrada.success)
       throw new ErrorHttp("Solicitud de datos inválida.", 400);
     const comando = entrada.data;
-    const local = await obtenerSesionLocal();
     let data: unknown;
-    if (local) {
-      if (comando.accion !== "leer")
-        throw new ErrorHttp(
-          "El acceso temporal consulta Supabase en modo de solo lectura. No se ha modificado ningún registro.",
-          403,
-        );
-      data = await leerSupabaseExistente(crearClienteLectura(), comando.tabla, {
-        rol: local.rol,
-        id_usuario: local.usuario.id_usuario,
-        id_sucursal: local.usuario.id_sucursal,
-      });
-    } else {
-      const { db } = await autorizar();
-      if (comando.accion === "leer") {
-        data = await leerSupabaseExistente(db, comando.tabla);
+    {
+      const { db, usuario, rol } = await autorizar();
+      if (comando.accion === "contexto") {
+        const resultado = await db.rpc("contexto_sigaf", {});
+        if (resultado.error) throw new Error(resultado.error.message);
+        data = resultado.data;
+      } else if (comando.accion === "leer") {
+        data = await leerSupabaseExistente(db, comando.tabla, {
+          rol,
+          id_usuario: usuario.id_usuario,
+          id_sucursal: usuario.id_sucursal,
+        });
       } else if (comando.accion === "guardar") {
         validarCampos(comando);
+        if (comando.tabla !== "notificacion" && rol !== "ADMIN")
+          throw new ErrorHttp(
+            "Esta escritura requiere un perfil de administración.",
+            403,
+          );
         // Mantener cada tabla concreta preserva los tipos de escritura de PostgREST.
         const consulta = (() => {
           switch (comando.tabla) {
@@ -95,11 +94,14 @@ export async function POST(request: Request) {
                     .from("notificacion")
                     .update(campos)
                     .filter(TABLAS.notificacion, "eq", comando.id)
+                    .eq("id_usuario", usuario.id_usuario)
                 : db.from("notificacion").insert(campos);
             }
             case "reporte": {
-              const campos =
-                comando.campos as Database["public"]["Tables"]["reporte"]["Update"];
+              const campos = {
+                ...comando.campos,
+                id_usuario: usuario.id_usuario,
+              } as Database["public"]["Tables"]["reporte"]["Update"];
               return comando.id
                 ? db
                     .from("reporte")

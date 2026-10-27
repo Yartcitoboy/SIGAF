@@ -8,32 +8,42 @@ import {
   Pill,
   QrCode,
   ArrowLeftRight,
+  ShoppingCart,
   Bell,
   FileSpreadsheet,
   Users,
   Settings,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
-import { PALETAS } from "@/lib/tema/paletas";
+import { PerfilUsuario } from "./perfil-usuario";
 const modulos = [
   { nombre: "Dashboard", href: "/dashboard", Icono: LayoutDashboard },
   { nombre: "Inventario", href: "/inventario", Icono: Boxes },
   { nombre: "Productos", href: "/productos", Icono: Pill },
   { nombre: "Lotes", href: "/lotes", Icono: QrCode },
+  { nombre: "Dispensación", href: "/dispensacion", Icono: ShoppingCart },
   { nombre: "Movimientos", href: "/movimientos", Icono: ArrowLeftRight },
   { nombre: "Alertas", href: "/alertas", Icono: Bell },
+  { nombre: "Mensajes", href: "/mensajes", Icono: Mail },
   { nombre: "Reportes", href: "/reportes", Icono: FileSpreadsheet },
   { nombre: "Usuarios", href: "/usuarios", Icono: Users },
   { nombre: "Configuración", href: "/configuracion", Icono: Settings },
 ];
 export function Sidebar() {
   const pathname = usePathname();
-  const { perfilActual, tieneAccesoAModulo } = useRol();
+  const { tieneAccesoAModulo } = useRol();
   const [abierto, setAbierto] = useState(false);
   return (
     <aside className="barra-lateral sticky top-0 z-30 shrink-0 md:h-screen md:w-60">
+      <a
+        href="#contenido-principal"
+        className="sr-only focus:not-sr-only focus:block focus:p-4"
+      >
+        Ir al contenido
+      </a>
       <div className="flex items-center justify-between border-b border-barra-borde p-5">
         <Link href="/dashboard" className="flex items-center gap-3">
           <span className="rounded-xl bg-barra-activa p-2 text-barra-activa-tinta">
@@ -88,23 +98,7 @@ export function Sidebar() {
               </Link>
             ))}
         </nav>
-        <div className="m-4 rounded-xl border border-barra-borde bg-barra/50 p-4">
-          <p className="text-xs font-semibold text-barra-tinta">
-            {perfilActual.rol}
-          </p>
-          <p className="mt-1 truncate text-xs text-barra-muted">
-            {perfilActual.sucursal}
-          </p>
-          <div aria-hidden="true" className="mt-4 flex gap-1.5">
-            {PALETAS[perfilActual.rol].map((color) => (
-              <span
-                key={color}
-                className="h-2 flex-1 rounded-full ring-1 ring-inset ring-white/15"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
+        <PerfilUsuario />
       </div>
     </aside>
   );

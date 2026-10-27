@@ -2,24 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { esRol, tieneAcceso } from "@/lib/permisos";
 import type { Database } from "@/tipos/database";
-import {
-  accesoLocalHabilitado,
-  COOKIE_LOCAL,
-  verificarSesionLocal,
-} from "@/lib/auth/sesion-local";
 export async function proxy(request: NextRequest) {
-  if (accesoLocalHabilitado(request.headers.get("host"))) {
-    const local = verificarSesionLocal(
-      request.cookies.get(COOKIE_LOCAL)?.value,
-      process.env.SIGAF_LOCAL_SESSION_SECRET,
-    );
-    if (local)
-      return tieneAcceso(local.rol, request.nextUrl.pathname)
-        ? NextResponse.next({ request })
-        : NextResponse.redirect(
-            new URL("/dashboard?acceso=denegado", request.url),
-          );
-  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   let response = NextResponse.next({ request });
@@ -70,10 +53,12 @@ export const config = {
     "/inventario/:path*",
     "/productos/:path*",
     "/lotes/:path*",
+    "/dispensacion/:path*",
     "/movimientos/:path*",
     "/alertas/:path*",
     "/reportes/:path*",
     "/usuarios/:path*",
     "/configuracion/:path*",
+    "/mensajes/:path*",
   ],
 };

@@ -90,13 +90,13 @@ export const TEMAS: Record<RolPerfil, Record<ModoTema, ColoresTema>> = {
       sutil: "#f0f6fa",
       elevado: "#d7e2ea",
       tinta: "#0e2a47",
-      muted: "#4d6b82",
+      muted: "#455c70",
       borde: "#d7e2ea",
       separador: "#e5eff5",
-      accion: "#2f7fc1",
-      "accion-hover": "#236399",
+      accion: "#236399",
+      "accion-hover": "#164d78",
       "sobre-accion": "#ffffff",
-      acento: "#2f7fc1",
+      acento: "#1d5f91",
       "acento-suave": "#b7e3ff",
       "acento-borde": "#7cc8ff",
       grafico: "#2f7fc1",
@@ -129,7 +129,7 @@ export const TEMAS: Record<RolPerfil, Record<ModoTema, ColoresTema>> = {
       "barra-muted": "#b7e3ff",
       "barra-borde": "#183b57",
       "barra-hover": "#112b40",
-      "barra-activa": "#2f7fc1",
+      "barra-activa": "#236399",
       "barra-activa-tinta": "#f8fbff",
     },
   },
@@ -146,7 +146,7 @@ export const TEMAS: Record<RolPerfil, Record<ModoTema, ColoresTema>> = {
       accion: "#1B806D",
       "accion-hover": "#003A40",
       "sobre-accion": "#ffffff",
-      acento: "#05868E",
+      acento: "#00646b",
       "acento-suave": "#e4f3f4",
       "acento-borde": "#05868E",
       grafico: "#1B806D",
@@ -167,10 +167,10 @@ export const TEMAS: Record<RolPerfil, Record<ModoTema, ColoresTema>> = {
       muted: "#8ec4bd",
       borde: "#12545d",
       separador: "#09434b",
-      accion: "#05868E",
-      "accion-hover": "#1B806D",
+      accion: "#1B806D",
+      "accion-hover": "#126b5b",
       "sobre-accion": "#ffffff",
-      acento: "#05868E",
+      acento: "#8ec4bd",
       "acento-suave": "#032e35",
       "acento-borde": "#05868E",
       grafico: "#05868E",
@@ -185,12 +185,6 @@ export const TEMAS: Record<RolPerfil, Record<ModoTema, ColoresTema>> = {
   },
 };
 
-export function nombreCookieTema(rol: RolPerfil) {
-  return `sigaf_tema_${rol.toLowerCase()}`;
-}
-export function modoValido(valor?: string): ModoTema {
-  return valor === "oscuro" ? "oscuro" : "claro";
-}
 export function alternarModo(modo: ModoTema): ModoTema {
   return modo === "claro" ? "oscuro" : "claro";
 }

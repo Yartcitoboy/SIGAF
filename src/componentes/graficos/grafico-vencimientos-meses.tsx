@@ -1,11 +1,12 @@
 import type { Inventario } from "@/tipos/database";
-import { fechaChile } from "@/lib/servicios/fechas";
+import { unidadesFuturasDelMes } from "@/lib/vistas/presentacion";
 export function GraficoVencimientosMeses({
   inventario,
+  hoy,
 }: {
   inventario: Inventario[];
+  hoy: string;
 }) {
-  const hoy = fechaChile();
   const meses = Array.from({ length: 6 }, (_, n) => {
     const fecha = new Date(hoy.slice(0, 7) + "-01T12:00:00Z");
     fecha.setUTCMonth(fecha.getUTCMonth() + n);
@@ -16,9 +17,7 @@ export function GraficoVencimientosMeses({
         month: "short",
         timeZone: "UTC",
       }).format(fecha),
-      unidades: inventario
-        .filter((i) => i.lote?.fecha_vencimiento.startsWith(mes))
-        .reduce((a, i) => a + i.stock_actual, 0),
+      unidades: unidadesFuturasDelMes(inventario, mes, hoy),
     };
   });
   const max = Math.max(1, ...meses.map((m) => m.unidades));
@@ -26,7 +25,7 @@ export function GraficoVencimientosMeses({
     <section className="panel">
       <h2 className="font-semibold">Próximos vencimientos</h2>
       <p className="mt-1 text-xs text-muted">
-        Unidades por mes · próximos seis meses
+        Vencimientos posteriores a hoy · seis meses. Excluye caducados.
       </p>
       <div className="mt-7 flex h-48 items-end gap-3">
         {meses.map((m) => (

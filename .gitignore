@@ -12,7 +12,8 @@
 
 # testing
 /coverage
-/.sigaf-local/
+/.artifacts/
+/supabase/.temp/
 
 # next.js
 /.next/

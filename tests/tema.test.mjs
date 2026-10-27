@@ -1,13 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-const {
-  PALETAS,
-  TEMAS,
-  nombreCookieTema,
-  modoValido,
-  alternarModo,
-  variablesTema,
-} = await import("../src/lib/tema/paletas.ts");
+const { PALETAS, TEMAS, alternarModo, variablesTema } =
+  await import("../src/lib/tema/paletas.ts");
 function luminancia(hex) {
   const rgb = hex
     .slice(1)
@@ -24,8 +18,8 @@ function contraste(a, b) {
 test("temas: se conservan exactamente los cinco colores de cada rol", () => {
   assert.deepEqual(PALETAS, {
     ADMIN: ["#000020", "#171a4a", "#2f2c79", "#5dc1b9", "#9ce0db"],
-    BODEGUERO: ["#031926", "#468189", "#77aca2", "#9dbebb", "#f4e9cd"],
-    AUXILIAR: ["#a3b18a", "#dad7cd", "#588157", "#3a5a40", "#344e41"],
+    BODEGUERO: ["#b7e3ff", "#7cc8ff", "#2f7fc1", "#f8fbff", "#d7e2ea"],
+    AUXILIAR: ["#003A40", "#1B806D", "#05868E", "#44499C", "#E5E1E6"],
   });
   for (const rol of Object.keys(PALETAS)) {
     for (const modo of ["claro", "oscuro"]) {
@@ -69,12 +63,7 @@ test("temas: contraste AA en texto, botones y navegación de las seis variantes"
       );
     }
 });
-test("temas: alternancia reversible, valores seguros y preferencia independiente por rol", () => {
+test("temas: alternancia reversible entre los dos modos", () => {
   assert.equal(alternarModo("claro"), "oscuro");
   assert.equal(alternarModo(alternarModo("claro")), "claro");
-  for (const valor of [undefined, "", "auto", "dark", "<script>"])
-    assert.equal(modoValido(valor), "claro");
-  assert.equal(modoValido("oscuro"), "oscuro");
-  assert.equal(new Set(Object.keys(PALETAS).map(nombreCookieTema)).size, 3);
-  assert.equal(nombreCookieTema("BODEGUERO"), "sigaf_tema_bodeguero");
 });

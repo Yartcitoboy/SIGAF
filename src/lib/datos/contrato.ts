@@ -28,6 +28,7 @@ const escalar = z.union([
   z.null(),
 ]);
 export const comandoDatos = z.discriminatedUnion("accion", [
+  z.object({ accion: z.literal("contexto") }).strict(),
   z.object({ accion: z.literal("leer"), tabla }).strict(),
   z
     .object({
@@ -105,7 +106,7 @@ const CAMPOS: Record<
   sucursal: ["nombre", "direccion", "id_farmacia"],
   bodega: ["nombre", "ubicacion", "id_sucursal", "es_sala_ventas"],
   notificacion: ["estado"],
-  reporte: ["id_usuario", "tipo", "formato", "fecha_generacion"],
+  reporte: ["tipo", "formato"],
 };
 export function validarCampos(
   comando: Extract<ComandoDatos, { accion: "guardar" }>,

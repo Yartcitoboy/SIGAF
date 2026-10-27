@@ -2,7 +2,6 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { esRol } from "@/lib/permisos";
 import type { RolPerfil } from "@/tipos/database";
-import { obtenerSesionLocal } from "@/lib/auth/local-server";
 
 export class ErrorHttp extends Error {
   constructor(
@@ -13,11 +12,6 @@ export class ErrorHttp extends Error {
   }
 }
 export async function autorizar(roles?: RolPerfil[]) {
-  if (await obtenerSesionLocal())
-    throw new ErrorHttp(
-      "Esta operación institucional no está disponible con una cuenta local. Los datos locales se gestionan por separado.",
-      403,
-    );
   const db = await createClient();
   const {
     data: { user },

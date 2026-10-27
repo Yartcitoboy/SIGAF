@@ -6,21 +6,31 @@ export const PERMISOS_MODULOS: Record<RolPerfil, string[]> = {
     "/inventario",
     "/productos",
     "/lotes",
+    "/dispensacion",
     "/movimientos",
     "/alertas",
     "/reportes",
     "/usuarios",
     "/configuracion",
+    "/mensajes",
   ],
   BODEGUERO: [
+    "/mensajes",
     "/dashboard",
     "/inventario",
     "/productos",
     "/lotes",
+    "/dispensacion",
     "/movimientos",
     "/alertas",
   ],
-  AUXILIAR: ["/dashboard", "/inventario", "/alertas"],
+  AUXILIAR: [
+    "/dashboard",
+    "/inventario",
+    "/dispensacion",
+    "/alertas",
+    "/mensajes",
+  ],
 };
 export function esRol(valor: unknown): valor is RolPerfil {
   return typeof valor === "string" && Object.hasOwn(PERMISOS_MODULOS, valor);

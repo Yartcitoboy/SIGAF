@@ -9,7 +9,9 @@ import { ModalCrearLote } from "@/componentes/modales/modal-crear-lote";
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
 import { calcularSemaforoLote } from "@/lib/servicios/semaforo";
-import { useRol } from "@/context/rol-context";
+import { EtiquetaLote } from "@/componentes/productos/etiqueta-lote";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
+import { coincide, fechaVisible } from "@/lib/vistas/presentacion";
 import {
   BotonDetalle,
   DetalleProducto,
@@ -24,24 +26,43 @@ export default function LotesPage() {
 function ContenidoLotes() {
   const parametros = useSearchParams();
   const consulta = useConsulta(obtenerOperacion);
-  const { soloLectura } = useRol();
-  const bloquearEscritura =
-    soloLectura || Boolean(consulta.datos?.configuracion.esquema_original);
   const [abierto, setAbierto] = useState(parametros.has("recepcion"));
   const [detalle, setDetalle] = useState<number | null>(null);
+  const [etiqueta, setEtiqueta] = useState<number | null>(null);
   const [productoInicial, setProductoInicial] = useState(
     Number(parametros.get("producto")) || undefined,
   );
   const [texto, setTexto] = useState("");
+  const [estado, setEstado] = useState("");
+  const [stock, setStock] = useState("");
+  const limpiar = () => {
+    setTexto("");
+    setEstado("");
+    setStock("");
+  };
   const lotes =
     consulta.datos?.lotes
-      .filter((l) =>
-        [
-          l.numero_lote,
-          consulta.datos?.productos.find((p) => p.id_producto === l.id_producto)
-            ?.nombre,
-        ].some((v) => v?.toLowerCase().includes(texto.toLowerCase())),
-      )
+      .filter((l) => {
+        const cantidad = consulta
+          .datos!.inventario.filter((i) => i.id_lote === l.id_lote)
+          .reduce((s, i) => s + i.stock_actual, 0);
+        return (
+          coincide(
+            texto,
+            l.numero_lote,
+            consulta.datos!.productos.find(
+              (p) => p.id_producto === l.id_producto,
+            )?.nombre,
+          ) &&
+          (!estado ||
+            calcularSemaforoLote(
+              l.fecha_vencimiento,
+              consulta.datos!.configuracion,
+              consulta.datos!.hoy,
+            ).estado === estado) &&
+          (!stock || (stock === "agotado" ? cantidad === 0 : cantidad > 0))
+        );
+      })
       .sort((a, b) => a.fecha_vencimiento.localeCompare(b.fecha_vencimiento)) ??
     [];
   return (
@@ -58,23 +79,57 @@ function ContenidoLotes() {
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
         />
+        <select
+          aria-label="Estado del lote"
+          className="campo w-auto!"
+          value={estado}
+          onChange={(e) => setEstado(e.target.value)}
+        >
+          <option value="">Todos los estados</option>
+          <option value="VENCIDO">Caducado</option>
+          <option value="NARANJO">Crítico</option>
+          <option value="AMARILLO">Preventivo</option>
+          <option value="VERDE">Vigente</option>
+        </select>
+        <select
+          aria-label="Existencias del lote"
+          className="campo w-auto!"
+          value={stock}
+          onChange={(e) => setStock(e.target.value)}
+        >
+          <option value="">Todos los lotes</option>
+          <option value="con-stock">Con stock físico</option>
+          <option value="agotado">Agotados</option>
+        </select>
         <button
-          disabled={!consulta.datos || bloquearEscritura}
-          title={
-            bloquearEscritura
-              ? "Consulta del esquema existente, sin escrituras de stock"
-              : undefined
-          }
+          disabled={!consulta.datos}
+          title={undefined}
           className="boton-primario"
           onClick={() => {
             setProductoInicial(undefined);
             setAbierto(true);
           }}
         >
-          + Recepción de lote
+          {"+ Recepción de lote"}
         </button>
       </div>
-      <EstadoDatos {...consulta} vacio={!lotes.length} />
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={lotes.length}
+          total={consulta.datos.lotes.length}
+          unidad="lotes"
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+          limpiar={limpiar}
+        />
+      )}
+      <EstadoDatos
+        {...consulta}
+        vacio={!lotes.length}
+        filtrado={Boolean(texto || estado || stock)}
+        limpiar={limpiar}
+      />
       {consulta.datos &&
         !consulta.cargando &&
         !consulta.error &&
@@ -88,6 +143,7 @@ function ContenidoLotes() {
                   <th>Vencimiento</th>
                   <th>Stock / ubicaciones</th>
                   <th>Estado</th>
+                  <th>Etiqueta</th>
                 </tr>
               </thead>
               <tbody>
@@ -98,6 +154,7 @@ function ContenidoLotes() {
                   const semaforo = calcularSemaforoLote(
                     l.fecha_vencimiento,
                     consulta.datos!.configuracion,
+                    consulta.datos!.hoy,
                   );
                   return (
                     <tr key={l.id_lote}>
@@ -116,7 +173,7 @@ function ContenidoLotes() {
                           )?.nombre
                         }
                       </td>
-                      <td>{l.fecha_vencimiento}</td>
+                      <td>{fechaVisible(l.fecha_vencimiento)}</td>
                       <td>
                         {stocks.reduce((a, i) => a + i.stock_actual, 0)} un.
                         <p className="text-xs text-muted">
@@ -130,6 +187,15 @@ function ContenidoLotes() {
                           diasRestantes={semaforo.diasRestantes}
                         />
                       </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="boton-secundario"
+                          onClick={() => setEtiqueta(l.id_lote)}
+                        >
+                          Ver etiqueta
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -137,7 +203,7 @@ function ContenidoLotes() {
             </table>
           </div>
         )}
-      {consulta.datos && !bloquearEscritura && (
+      {consulta.datos && (
         <ModalCrearLote
           abierto={abierto}
           alCerrar={() => setAbierto(false)}
@@ -145,6 +211,7 @@ function ContenidoLotes() {
           productos={consulta.datos.productos}
           bodegas={consulta.datos.bodegas}
           configuracion={consulta.datos.configuracion}
+          hoy={consulta.datos.hoy}
           productoInicial={productoInicial}
         />
       )}
@@ -159,6 +226,13 @@ function ContenidoLotes() {
             setProductoInicial(id);
             setAbierto(true);
           }}
+        />
+      )}
+      {etiqueta !== null && consulta.datos && (
+        <EtiquetaLote
+          datos={consulta.datos}
+          id={etiqueta}
+          cerrar={() => setEtiqueta(null)}
         />
       )}
     </TransicionPagina>

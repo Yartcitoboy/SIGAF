@@ -26,8 +26,8 @@ ALTER TABLE public.notificacion ADD COLUMN IF NOT EXISTS intentos_correo int NOT
 ALTER TABLE public.notificacion ADD COLUMN IF NOT EXISTS proximo_intento timestamptz DEFAULT now();
 CREATE TABLE IF NOT EXISTS public.configuracion (
   id int PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  dias_critico int NOT NULL DEFAULT 45 CHECK (dias_critico > 0),
-  dias_preventivo int NOT NULL DEFAULT 90,
+  dias_critico int NOT NULL DEFAULT 7 CHECK (dias_critico > 0),
+  dias_preventivo int NOT NULL DEFAULT 30,
   holgura_dias int NOT NULL DEFAULT 0 CHECK (holgura_dias >= 0),
   CHECK (dias_preventivo > dias_critico)
 );
@@ -229,6 +229,8 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION public.recibir_lote(jsonb),public.operar_stock(int,int,text,uuid,text,int) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.recibir_lote(jsonb),public.operar_stock(int,int,text,uuid,text,int) TO authenticated;
+REVOKE ALL ON FUNCTION public.rol_actual(),public.puede_sucursal(int),public.puede_inventario(int) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.rol_actual(),public.puede_sucursal(int),public.puede_inventario(int) TO authenticated,service_role;
 REVOKE ALL ON FUNCTION public.generar_alertas(),public.reclamar_correos() FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.generar_alertas(),public.reclamar_correos() TO service_role;
 COMMIT;

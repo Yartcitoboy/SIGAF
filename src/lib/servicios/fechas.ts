@@ -1,4 +1,4 @@
-export function fechaChile(ahora = new Date()) {
+export function fechaChile(ahora: Date) {
   const partes = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Santiago",
     year: "numeric",
@@ -15,7 +15,7 @@ export function fechaValida(fecha: string) {
     new Date(fecha).toISOString().slice(0, 10) === fecha
   );
 }
-export function diasHasta(fecha: string, hoy = fechaChile()) {
+export function diasHasta(fecha: string, hoy: string) {
   if (!fechaValida(fecha) || !fechaValida(hoy))
     throw new Error("Fecha inválida. Usa una fecha de calendario real.");
   return Math.round((Date.parse(fecha) - Date.parse(hoy)) / 86400000);

@@ -1,6 +1,6 @@
 # SIGAF
 
-La implementación de operación autenticada, permisos, FEFO transaccional, alertas y exportaciones se activa siguiendo [Puesta en marcha](docs/puesta-en-marcha.md). Consulta ese documento para aplicar las migraciones, vincular la primera cuenta y configurar Supabase/Resend.
+La aplicación trabaja exclusivamente con Supabase y cuentas reales. Se retiraron el acceso temporal y los datos demo. El proyecto compartido ya tiene las migraciones operativas, 214 productos (198 importados del ISP) y Usuarios conectado mediante una función protegida. Consulta [Puesta en marcha](docs/puesta-en-marcha.md) y [Cambios actuales](docs/cambios-base-real-e-interfaz-2026-10-27.md) para conocer la interfaz, roles y configuración externa pendiente.
 ### Sistema Inteligente de Gestión y Alerta Farmacéutica
 **Proyecto de Título / Capstone · Duoc UC**
 
@@ -22,7 +22,7 @@ SIGAF es una solución SaaS diseñada para farmacias independientes que optimiza
 - **Feedback:** Sonner (Toasts)
 
 ### Backend & Persistencia
-- **Motor:** PostgreSQL sobre Supabase (Docker / Local)
+- **Motor:** PostgreSQL del proyecto Supabase configurado
 - **API Interna:** PostgREST automático de Supabase
 - **Autenticación:** Supabase Auth (JWT + RBAC: ADMIN, BODEGUERO, AUXILIAR)
 
@@ -45,7 +45,7 @@ SIGAF es una solución SaaS diseñada para farmacias independientes que optimiza
    ```bash
    cp .env.example .env.local
    ```
-   Ajusta las credenciales según tu instancia de Supabase (Docker o Cloud).
+   Configura la URL y las claves correspondientes al proyecto Supabase real.
 
 3. **Iniciar servidor de desarrollo:**
    ```bash

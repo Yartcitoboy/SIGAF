@@ -1,27 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Configuracion, RolPerfil } from "@/tipos/database";
+import type { Database, RolPerfil } from "@/tipos/database";
 import type { TablaDatos } from "./contrato";
 import { COLUMNAS_USUARIO, TABLAS } from "./contrato";
 import { todasLasFilas } from "../servicios/consulta";
 
-// Umbrales de fn_estado_semaforo en 001_initial_schema.sql, no una tabla ficticia.
-export const CONFIGURACION_ORIGINAL: Configuracion = {
-  id: 1,
-  dias_critico: 7,
-  dias_preventivo: 30,
-  holgura_dias: 0,
-  esquema_original: true,
-};
-export function faltaTablaConfiguracion(error: {
-  code?: string;
-  message?: string;
-}) {
-  return (
-    ["PGRST205", "42P01"].includes(error.code ?? "") &&
-    /configuracion/i.test(error.message ?? "")
-  );
-}
-export interface ConsultaTemporal {
+export interface AlcanceConsulta {
   rol: RolPerfil;
   id_sucursal: number | null;
   id_usuario: string;
@@ -29,13 +12,11 @@ export interface ConsultaTemporal {
 export async function leerSupabaseExistente(
   db: SupabaseClient<Database>,
   tabla: TablaDatos,
-  temporal?: ConsultaTemporal,
+  alcance: AlcanceConsulta,
 ) {
   if (tabla === "configuracion") {
     const resultado = await db.from("configuracion").select("*").eq("id", 1);
     if (resultado.error) {
-      if (faltaTablaConfiguracion(resultado.error))
-        return [{ ...CONFIGURACION_ORIGINAL }];
       throw new Error(resultado.error.message);
     }
     if (!resultado.data.length)
@@ -44,26 +25,33 @@ export async function leerSupabaseExistente(
       );
     return resultado.data;
   }
-  const operario = temporal && temporal.rol !== "ADMIN";
+  const operario = alcance.rol !== "ADMIN";
   if (
     operario &&
     ["usuario", "perfil", "reporte", "movimiento_inventario", "merma"].includes(
       tabla,
     ) &&
-    (temporal.rol === "AUXILIAR" ||
+    (alcance.rol === "AUXILIAR" ||
       ["usuario", "perfil", "reporte"].includes(tabla))
   )
     return [];
-  // Una identidad temporal no tiene notificaciones personales en Supabase.
-  if (temporal && tabla === "notificacion" && temporal.rol !== "ADMIN")
-    return [];
+  // La bandeja corresponde siempre al usuario autenticado, incluido Admin.
+  if (tabla === "notificacion")
+    return todasLasFilas((a, b) =>
+      db
+        .from("notificacion")
+        .select("*")
+        .eq("id_usuario", alcance.id_usuario)
+        .order("id_notificacion", { ascending: false })
+        .range(a, b),
+    );
   let columna: string | undefined;
   let ids: number[] | undefined;
   if (operario) {
-    if (!temporal.id_sucursal) return [];
+    if (!alcance.id_sucursal) return [];
     if (tabla === "sucursal" || tabla === "bodega") {
       columna = "id_sucursal";
-      ids = [temporal.id_sucursal];
+      ids = [alcance.id_sucursal];
     } else if (
       ["inventario", "lote", "movimiento_inventario", "merma"].includes(tabla)
     ) {
@@ -71,7 +59,7 @@ export async function leerSupabaseExistente(
         db
           .from("bodega")
           .select("*")
-          .eq("id_sucursal", temporal.id_sucursal!)
+          .eq("id_sucursal", alcance.id_sucursal!)
           .order("id_bodega")
           .range(a, b),
       );

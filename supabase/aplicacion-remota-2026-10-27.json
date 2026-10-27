@@ -1,0 +1,125 @@
+{
+  "fecha_chile": "2026-10-27",
+  "proyecto": "nkqxhpiagkcfvxbytarn",
+  "estado": "APLICADO y verificado",
+  "advertencia": "No ejecutar 001 ni repetir estas migraciones. Conciliar identificadores antes de db push.",
+  "migraciones": [
+    {
+      "archivo": "migrations/002_operacion_segura.sql",
+      "version_remota": "20261027064610",
+      "nombre_remoto": "sigaf_002_operacion_segura",
+      "sha256_archivo": "96ac503d7d5b61ea3ade7b8a1187b6e24a49b4dfeac031c900bf6fcc44dba82f"
+    },
+    {
+      "archivo": "migrations/003_resumenes_correo.sql",
+      "version_remota": "20261027064947",
+      "nombre_remoto": "sigaf_003_resumenes_correo",
+      "sha256_archivo": "52daad986c7e13f0bd09829de588d26d55e490858610a3c42ba7cecb5a6284c6"
+    },
+    {
+      "archivo": "migrations/004_proteger_administracion.sql",
+      "version_remota": "20261027065006",
+      "nombre_remoto": "sigaf_004_proteger_administracion",
+      "sha256_archivo": "478b77f088a3ba08b466cb65c582aebc5ffbee389c376e658cbd3daedbd57829"
+    },
+    {
+      "archivo": "migrations/005_contexto_y_preferencias.sql",
+      "version_remota": "20261027065014",
+      "nombre_remoto": "sigaf_005_contexto_y_preferencias",
+      "sha256_archivo": "14d33270628b50cf8b390ae349323dc13c76b1c178a961e46b7716947eb2acfc"
+    },
+    {
+      "archivo": "migrations/006_procedencia_catalogo_isp.sql",
+      "version_remota": "20261027065024",
+      "nombre_remoto": "sigaf_006_procedencia_catalogo_isp",
+      "sha256_archivo": "31700f27d70f6d3be61ea1ac5d22f44e570966a2d48fe75da6405086868f06bf"
+    },
+    {
+      "archivo": "migrations/20261027065931_seguridad_cuentas_reales.sql",
+      "version_remota": "20261027070910",
+      "nombre_remoto": "seguridad_cuentas_reales",
+      "sha256_archivo": "5e542a550128216e618033188054db17b2248b1f7ec93366760f8c026f876c17"
+    },
+    {
+      "archivo": "migrations/20261027072035_optimizar_politicas_sesion.sql",
+      "version_remota": "20261027072124",
+      "nombre_remoto": "optimizar_politicas_sesion",
+      "sha256_archivo": "b622a250d8992da04bae32236623c5f0d95053f74cc5321b48a9a1e7b75e87be"
+    },
+    {
+      "archivo": "migrations/20261027205509_proteger_ultimo_admin_real.sql",
+      "version_remota": "20261027205615",
+      "nombre_remoto": "proteger_ultimo_admin_real",
+      "sha256_archivo": "e8518d366782a193bda508dd05f86822927af443f0e445268525406eff5b5079"
+    }
+  ],
+  "funcion_usuarios": {
+    "nombre": "sigaf-usuarios",
+    "version": 1,
+    "estado": "ACTIVE",
+    "verificacion": "JWT comprobado por Auth dentro de la función; rol ADMIN activo consultado en base; sin credenciales administrativas en navegador",
+    "sha256_codigo": "42d407cfa2b999614e718b0108757f51f837c9cf6fb6b4e5a1e1eaf17f323710",
+    "pruebas": {
+      "sin_sesion": 401,
+      "token_invalido": 401,
+      "metodo_no_permitido": 405,
+      "altas_ejecutadas": 0,
+      "passwords_cambiadas": 0
+    }
+  },
+  "verificacion_datos": {
+    "productos_antes": 16,
+    "productos_isp_agregados": 198,
+    "productos_despues": 214,
+    "registros_isp_duplicados": 0,
+    "lotes": 19,
+    "existencias": 19,
+    "unidades": 2275,
+    "movimientos": 10,
+    "mermas": 3,
+    "cuentas_auth_vinculadas": 2,
+    "historicos_sin_auth": 3,
+    "notificaciones_previas": 8,
+    "alertas_generadas": 14,
+    "correos_enviados": 0,
+    "tablas_publicas_sin_rls": 0
+  },
+  "configuracion": {
+    "dias_critico": 7,
+    "dias_preventivo": 30,
+    "holgura_dias": 0,
+    "salas_ventas": [
+      {
+        "id_bodega": 3,
+        "nombre": "Sala de Ventas - Vitrina Prioritaria",
+        "ubicacion": "Punto de Atención al Público"
+      }
+    ]
+  },
+  "cuentas_vinculadas_autorizadas": [
+    {
+      "email": "admin@gmail.com",
+      "rol": "ADMIN",
+      "alcance": "Todas las sucursales"
+    },
+    {
+      "email": "admin.sigaf@local.com",
+      "rol": "ADMIN",
+      "alcance": "Todas las sucursales"
+    }
+  ],
+  "pendientes": [
+    "Configurar entrega Resend y programación de cron",
+    "Mensajes solo interfaz, envío deshabilitado por solicitud",
+    "Completar atributos verificables de envases antes de recibir stock",
+    "Pruebas operativas con cuentas Bodeguero/Auxiliar acordadas con el equipo"
+  ],
+  "verificacion": {
+    "pruebas_aprobadas": 52,
+    "lint": "APROBADO",
+    "typescript": "APROBADO",
+    "compilacion_produccion": "APROBADA webpack",
+    "navegador": "Admin real: lecturas de todos los módulos, selectores y costo CLP sin guardar, Usuarios conectado, tema persistente en DB y restaurado a claro",
+    "escrituras_operativas_de_prueba": 0
+  }
+}

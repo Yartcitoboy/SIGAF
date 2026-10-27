@@ -25,7 +25,7 @@ import {
 } from "@/lib/vistas/detalle-producto";
 import { useRol } from "@/context/rol-context";
 import type { Categoria, Producto } from "@/tipos/database";
-
+import { fechaHoraVisible, fechaVisible } from "@/lib/vistas/presentacion";
 export function BotonDetalle({
   nombre,
   abrir,
@@ -86,7 +86,7 @@ export function DetalleProducto({
     idInventario: number,
   ) => void;
 }) {
-  const { rolActual, soloLectura } = useRol();
+  const { rolActual } = useRol();
   const cargar = useCallback(async () => {
     const [operacion, listaCategorias] = await Promise.all([
       datos ?? obtenerOperacion(),
@@ -143,11 +143,16 @@ export function DetalleProducto({
                   : "Lote seleccionado"}
               </p>
               <p className="font-semibold">{detalle.lote?.numero_lote}</p>
+              <p className="mt-2 text-xs text-muted">
+                El bloque superior identifica el registro seleccionado. Los
+                totales siguientes corresponden a todos los lotes del producto
+                en el alcance consultado.
+              </p>
               {detalle.movimiento && (
                 <p className="mt-2 text-xs text-muted">
                   {detalle.movimiento.tipo_movimiento} ·{" "}
                   {numero(detalle.movimiento.cantidad)} un. ·{" "}
-                  {detalle.movimiento.fecha.replace("T", " ").slice(0, 16)}
+                  {fechaHoraVisible(detalle.movimiento.fecha)}
                 </p>
               )}
             </div>
@@ -155,14 +160,17 @@ export function DetalleProducto({
           <dl>
             <Dato nombre="Estado">
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${detalle.stockActual === 0 || detalle.stockApto === 0 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300" : "bg-acento-suave text-acento"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${detalle.stockActual === 0 || detalle.stockApto === 0 ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300" : detalle.estado === "Con lotes en alerta" ? "bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200" : "bg-acento-suave text-acento"}`}
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {detalle.estado}
               </span>
             </Dato>
-            <Dato nombre="Stock actual">
+            <Dato nombre="Stock físico total">
               {numero(detalle.stockActual)} unidades
+            </Dato>
+            <Dato nombre="Apto por fecha">
+              {numero(detalle.stockApto)} unidades
             </Dato>
             <Dato nombre="Disponible en sala">
               {detalle.salasRegistradas
@@ -193,10 +201,10 @@ export function DetalleProducto({
             {detalle.lote && (
               <>
                 <Dato nombre="Vencimiento del lote">
-                  {detalle.lote.fecha_vencimiento}
+                  {fechaVisible(detalle.lote.fecha_vencimiento)}
                 </Dato>
                 <Dato nombre="Fecha de ingreso">
-                  {detalle.lote.fecha_ingreso}
+                  {fechaVisible(detalle.lote.fecha_ingreso)}
                 </Dato>
               </>
             )}
@@ -274,7 +282,8 @@ export function DetalleProducto({
                     />
                   </div>
                   <p className="text-xs text-muted">
-                    Vence {l.fecha_vencimiento} · {numero(l.stock)} un.
+                    Vence {fechaVisible(l.fecha_vencimiento)} ·{" "}
+                    {numero(l.stock)} un.
                   </p>
                 </div>
               ))}
@@ -297,7 +306,7 @@ export function DetalleProducto({
                     <div>
                       <p className="font-semibold">{m.tipo_movimiento}</p>
                       <p className="mt-1 text-muted">
-                        {m.fecha.replace("T", " ").slice(0, 16)}
+                        {fechaHoraVisible(m.fecha)}
                       </p>
                     </div>
                     <span className="font-semibold">
@@ -308,84 +317,82 @@ export function DetalleProducto({
               </div>
             </section>
           )}
-          {rolActual !== "AUXILIAR" &&
-            !soloLectura &&
-            !consulta.datos?.operacion.configuracion.esquema_original && (
-              <div className="mt-8 border-t border-separador pt-5">
-                <button
-                  type="button"
-                  onClick={() => setAcciones(!acciones)}
-                  aria-expanded={acciones}
-                  className="boton-primario w-full"
-                >
-                  <Plus size={18} />
-                  Registrar movimiento
-                </button>
-                {acciones && (
-                  <div className="mt-3 grid gap-2">
-                    <Link
-                      className="boton-secundario justify-center"
-                      href={`/lotes?recepcion=1&producto=${detalle.producto.id_producto}`}
-                      onClick={(e) => {
-                        if (alAbrirRecepcion) {
-                          e.preventDefault();
-                          alAbrirRecepcion(detalle.producto.id_producto);
-                        } else cerrar();
-                      }}
-                    >
-                      <ArrowDownToLine size={16} />
-                      Entrada de lote
-                    </Link>
-                    {(["TRASLADO", "MERMA"] as const).map((tipo) =>
-                      idInventario ? (
-                        <Link
-                          key={tipo}
-                          className="boton-secundario justify-center"
-                          href={`/movimientos?tipo=${tipo}&inventario=${idInventario}`}
-                          onClick={(e) => {
-                            if (alAbrirMovimiento) {
-                              e.preventDefault();
-                              alAbrirMovimiento(tipo, idInventario);
-                            } else cerrar();
-                          }}
-                        >
-                          {tipo === "TRASLADO" ? (
-                            <ArrowLeftRight size={16} />
-                          ) : (
-                            <ShieldAlert size={16} />
-                          )}
-                          {tipo === "TRASLADO"
-                            ? "Traslado de existencias"
-                            : "Merma / devolución"}
-                        </Link>
-                      ) : (
-                        <button
-                          key={tipo}
-                          type="button"
-                          disabled
-                          className="boton-secundario justify-center"
-                        >
-                          {tipo === "TRASLADO"
-                            ? "Traslado de existencias"
-                            : "Merma / devolución"}
-                        </button>
-                      ),
-                    )}
-                    {!idInventario && (
-                      <p className="text-xs text-muted">
-                        Sin existencias en el contexto seleccionado. Puedes
-                        registrar una entrada.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+          {rolActual !== "AUXILIAR" && (
+            <div className="mt-8 border-t border-separador pt-5">
+              <button
+                type="button"
+                onClick={() => setAcciones(!acciones)}
+                aria-expanded={acciones}
+                className="boton-primario w-full"
+              >
+                <Plus size={18} />
+                Registrar movimiento
+              </button>
+              {acciones && (
+                <div className="mt-3 grid gap-2">
+                  <Link
+                    className="boton-secundario justify-center"
+                    href={`/lotes?recepcion=1&producto=${detalle.producto.id_producto}`}
+                    onClick={(e) => {
+                      if (alAbrirRecepcion) {
+                        e.preventDefault();
+                        alAbrirRecepcion(detalle.producto.id_producto);
+                      } else cerrar();
+                    }}
+                  >
+                    <ArrowDownToLine size={16} />
+                    Entrada de lote
+                  </Link>
+                  {(["TRASLADO", "MERMA"] as const).map((tipo) =>
+                    idInventario ? (
+                      <Link
+                        key={tipo}
+                        className="boton-secundario justify-center"
+                        href={`/movimientos?tipo=${tipo}&inventario=${idInventario}`}
+                        onClick={(e) => {
+                          if (alAbrirMovimiento) {
+                            e.preventDefault();
+                            alAbrirMovimiento(tipo, idInventario);
+                          } else cerrar();
+                        }}
+                      >
+                        {tipo === "TRASLADO" ? (
+                          <ArrowLeftRight size={16} />
+                        ) : (
+                          <ShieldAlert size={16} />
+                        )}
+                        {tipo === "TRASLADO"
+                          ? "Traslado de existencias"
+                          : "Merma / devolución"}
+                      </Link>
+                    ) : (
+                      <button
+                        key={tipo}
+                        type="button"
+                        disabled
+                        className="boton-secundario justify-center"
+                      >
+                        {tipo === "TRASLADO"
+                          ? "Traslado de existencias"
+                          : "Merma / devolución"}
+                      </button>
+                    ),
+                  )}
+                  {!idInventario && (
+                    <p className="text-xs text-muted">
+                      Sin existencias en el contexto seleccionado. Puedes
+                      registrar una entrada.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <p className="mt-5 text-[11px] leading-relaxed text-muted">
-            Datos de Supabase.{" "}
-            {soloLectura
-              ? "Acceso temporal de solo lectura; no modifica registros."
-              : "Consulta limitada por los permisos de tu cuenta."}
+            Apto por fecha no acredita liberación sanitaria. La presentación no
+            se convierte automáticamente. Proveedor y stock mínimo no están
+            disponibles en los datos consultados. Datos de Supabase.{" "}
+            {"Consulta limitada por los permisos de tu cuenta."}
           </p>
         </>
       )}

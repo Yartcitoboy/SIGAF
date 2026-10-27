@@ -8,6 +8,8 @@ import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerProductos, obtenerCategorias } from "@/lib/servicios/productos";
 import { useRol } from "@/context/rol-context";
 import type { Producto } from "@/tipos/database";
+import { coincide } from "@/lib/vistas/presentacion";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import {
   BotonDetalle,
   DetalleProducto,
@@ -21,7 +23,7 @@ async function cargar() {
 }
 export default function ProductosPage() {
   const consulta = useConsulta(cargar);
-  const { rolActual, soloLectura } = useRol();
+  const { rolActual } = useRol();
   const [texto, setTexto] = useState("");
   const [categoria, setCategoria] = useState("");
   const [abierto, setAbierto] = useState(false);
@@ -30,12 +32,21 @@ export default function ProductosPage() {
   const tieneRegistroIsp = consulta.datos?.productos.some((p) =>
     Object.hasOwn(p, "registro_isp"),
   );
+  const limpiar = () => {
+    setTexto("");
+    setCategoria("");
+  };
   const filas =
     consulta.datos?.productos.filter(
       (p) =>
         (!categoria || String(p.id_categoria) === categoria) &&
-        [p.nombre, p.codigo_barras, p.principio_activo, p.descripcion].some(
-          (v) => v?.toLowerCase().includes(texto.toLowerCase()),
+        coincide(
+          texto,
+          p.nombre,
+          p.codigo_barras,
+          p.principio_activo,
+          p.descripcion,
+          p.registro_isp,
         ),
     ) ?? [];
   return (
@@ -67,25 +78,34 @@ export default function ProductosPage() {
         </select>
         {rolActual === "ADMIN" && (
           <button
-            disabled={!consulta.datos || soloLectura}
-            title={soloLectura ? "Acceso temporal de solo lectura" : undefined}
+            disabled={!consulta.datos}
             className="boton-primario"
             onClick={() => {
               setProducto(undefined);
               setAbierto(true);
             }}
           >
-            + Nuevo medicamento
+            {"+ Nuevo medicamento"}
           </button>
         )}
       </div>
-      {consulta.datos && !consulta.error && (
-        <p role="status" className="my-4 text-xs text-muted">
-          Mostrando {filas.length} de {consulta.datos.productos.length}{" "}
-          productos · Supabase
-        </p>
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={filas.length}
+          total={consulta.datos.productos.length}
+          unidad="productos · Supabase"
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+          limpiar={limpiar}
+        />
       )}
-      <EstadoDatos {...consulta} vacio={!filas.length} />
+      <EstadoDatos
+        {...consulta}
+        vacio={!filas.length}
+        filtrado={Boolean(texto || categoria)}
+        limpiar={limpiar}
+      />
       {consulta.datos &&
         !consulta.cargando &&
         !consulta.error &&
@@ -119,7 +139,7 @@ export default function ProductosPage() {
                     <td className="font-mono text-xs">
                       {p.codigo_barras || "Sin código"}
                     </td>
-                    <td>{p.unidad_medida}</td>
+                    <td>{p.unidad_medida || "Sin presentación registrada"}</td>
                     <td>
                       {
                         consulta.datos!.categorias.find(
@@ -133,19 +153,13 @@ export default function ProductosPage() {
                     {rolActual === "ADMIN" && (
                       <td>
                         <button
-                          disabled={soloLectura}
-                          title={
-                            soloLectura
-                              ? "Acceso temporal de solo lectura"
-                              : undefined
-                          }
-                          className="font-medium text-acento"
+                          className="boton-secundario"
                           onClick={() => {
                             setProducto(p);
                             setAbierto(true);
                           }}
                         >
-                          Editar
+                          {"Editar"}
                         </button>
                       </td>
                     )}
@@ -155,7 +169,7 @@ export default function ProductosPage() {
             </table>
           </div>
         )}
-      {consulta.datos && rolActual === "ADMIN" && !soloLectura && (
+      {consulta.datos && rolActual === "ADMIN" && (
         <ModalCrearProducto
           abierto={abierto}
           producto={producto}

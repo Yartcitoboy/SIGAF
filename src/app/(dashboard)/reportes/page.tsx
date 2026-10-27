@@ -8,17 +8,16 @@ import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
 import {
-  prepararReporte,
   crearPDF,
   crearLibroExcel,
   type TipoInforme,
 } from "@/lib/servicios/reportes";
 import { guardarFila } from "@/lib/servicios/datos";
-import { useRol } from "@/context/rol-context";
-import { fechaChile } from "@/lib/servicios/fechas";
+import { prepararInformeVisible } from "@/lib/vistas/informe-visible";
+import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
+import { HistorialReportes } from "@/componentes/reportes/historial-reportes";
 export default function ReportesPage() {
   const consulta = useConsulta(obtenerOperacion);
-  const { perfilActual, soloLectura } = useRol();
   const [tipo, setTipo] = useState<TipoInforme>("INVENTARIO");
   const [empresa, setEmpresa] = useState("");
   const [sucursal, setSucursal] = useState("");
@@ -40,6 +39,18 @@ export default function ReportesPage() {
   );
   const bodegas =
     consulta.datos?.bodegas.filter((b) => ids.has(b.id_sucursal)) ?? [];
+  const rangoInvalido = Boolean(desde && hasta && desde > hasta);
+  const filtroVisible = {
+    farmacia: farmacia?.id_farmacia ?? 0,
+    sucursal: sucursal ? Number(sucursal) : undefined,
+    bodega: bodega ? Number(bodega) : undefined,
+    desde,
+    hasta,
+  };
+  const vista =
+    consulta.datos && farmacia
+      ? prepararInformeVisible(consulta.datos, tipo, filtroVisible)
+      : null;
   async function exportar(formato: "PDF" | "XLS", completo = false) {
     if (!consulta.datos || !farmacia) return;
     if (desde && hasta && desde > hasta) {
@@ -70,13 +81,13 @@ export default function ReportesPage() {
         ? ["INVENTARIO", "MERMAS", "ROTACION"]
         : [tipo];
       const tablas = tipos.map((t) =>
-        prepararReporte(consulta.datos!, t, filtro),
+        prepararInformeVisible(consulta.datos!, t, filtro),
       );
       const nombre =
         "SIGAF-" +
         (completo ? "completo" : tipo.toLowerCase()) +
         "-" +
-        fechaChile();
+        consulta.datos.hoy;
       if (!tablas.some((t) => t.filas.length)) {
         toast.info("No hay registros para los filtros seleccionados.");
         return;
@@ -89,33 +100,31 @@ export default function ReportesPage() {
               sucursales.find((s) => String(s.id_sucursal) === sucursal)
                 ?.direccion || "Todas las sucursales",
               filtroTexto,
+              new Date(consulta.datos.ahora),
             )
           : null;
       const libro =
         formato === "XLS"
-          ? await crearLibroExcel(tablas, {
-              farmacia: farmacia.razon_social,
-              rut: farmacia.rut,
-              filtros: filtroTexto,
-            })
+          ? await crearLibroExcel(
+              tablas,
+              {
+                farmacia: farmacia.razon_social,
+                rut: farmacia.rut,
+                filtros: filtroTexto,
+              },
+              consulta.datos.ahora,
+            )
           : null;
-      if (!soloLectura)
-        await guardarFila("reporte", {
-          id_usuario: perfilActual.id_usuario,
-          tipo,
-          formato,
-          fecha_generacion: new Date().toISOString(),
-        });
+      await guardarFila("reporte", {
+        tipo,
+        formato,
+      });
       if (pdf) pdf.save(nombre + ".pdf");
       if (libro) {
         const XLSX = await import("xlsx");
         XLSX.writeFile(libro, nombre + ".xlsx");
       }
-      toast.success(
-        soloLectura
-          ? "Informe descargado sin modificar Supabase"
-          : "Informe generado con los registros seleccionados",
-      );
+      toast.success("Informe generado con los registros seleccionados");
     } catch (e) {
       toast.error(
         e instanceof Error ? e.message : "No se pudo generar el informe.",
@@ -130,16 +139,38 @@ export default function ReportesPage() {
         titulo="Reportes y auditoría"
         subtitulo="Inventario, libro de control y bajas. Documentos con identidad de la farmacia."
       />
+      {consulta.datos && (
+        <ResumenConsulta
+          cantidad={vista?.filas.length ?? 0}
+          total={vista?.filas.length ?? 0}
+          unidad="filas del informe seleccionado"
+          actualizado={consulta.actualizado}
+          recargar={consulta.recargar}
+          cargando={consulta.cargando}
+          limpiar={() => {
+            setEmpresa("");
+            setSucursal("");
+            setBodega("");
+            setDesde("");
+            setHasta("");
+            setTipo("INVENTARIO");
+          }}
+        />
+      )}
       <EstadoDatos {...consulta} />
       {consulta.datos && !consulta.cargando && !consulta.error && (
         <div className="grid gap-5 lg:grid-cols-3">
-          <section className="panel space-y-4 lg:col-span-2">
+          <fieldset
+            disabled={ocupado}
+            className="panel min-w-0 space-y-4 lg:col-span-2"
+          >
             <h2 className="font-semibold">Define el alcance</h2>
             <label className="block text-sm">
               Farmacia
               <select
                 required
                 value={empresa}
+                aria-label="Farmacia del informe"
                 onChange={(e) => {
                   setEmpresa(e.target.value);
                   setSucursal("");
@@ -160,6 +191,7 @@ export default function ReportesPage() {
                 Sucursal
                 <select
                   value={sucursal}
+                  aria-label="Sucursal del informe"
                   onChange={(e) => {
                     setSucursal(e.target.value);
                     setBodega("");
@@ -178,6 +210,7 @@ export default function ReportesPage() {
                 Bodega
                 <select
                   value={bodega}
+                  aria-label="Bodega del informe"
                   onChange={(e) => setBodega(e.target.value)}
                   className="campo mt-1"
                 >
@@ -190,7 +223,9 @@ export default function ReportesPage() {
                 </select>
               </label>
               <label className="text-sm">
-                Desde
+                {tipo === "INVENTARIO"
+                  ? "Vencimientos desde"
+                  : "Operaciones desde"}
                 <input
                   type="date"
                   value={desde}
@@ -199,9 +234,12 @@ export default function ReportesPage() {
                 />
               </label>
               <label className="text-sm">
-                Hasta
+                {tipo === "INVENTARIO"
+                  ? "Vencimientos hasta"
+                  : "Operaciones hasta"}
                 <input
                   type="date"
+                  min={desde || undefined}
                   value={hasta}
                   onChange={(e) => setHasta(e.target.value)}
                   className="campo mt-1"
@@ -216,15 +254,24 @@ export default function ReportesPage() {
               Informe
               <select
                 value={tipo}
+                aria-label="Tipo de informe"
                 onChange={(e) => setTipo(e.target.value as TipoInforme)}
                 className="campo mt-1"
               >
                 <option value="INVENTARIO">Inventario farmacéutico</option>
                 <option value="MERMAS">Mermas y acta de baja</option>
-                <option value="ROTACION">Rotación / libro de control</option>
+                <option value="ROTACION">Libro de movimientos</option>
               </select>
             </label>
-          </section>
+            {rangoInvalido && (
+              <p
+                role="alert"
+                className="text-sm text-red-700 dark:text-red-300"
+              >
+                La fecha inicial no puede superar la final.
+              </p>
+            )}
+          </fieldset>
           <section className="panel space-y-4">
             <h2 className="font-semibold">Exportar información</h2>
             <p className="text-sm text-muted">
@@ -232,7 +279,9 @@ export default function ReportesPage() {
               espacio de firma del Director Técnico.
             </p>
             <button
-              disabled={!farmacia || ocupado}
+              disabled={
+                !farmacia || ocupado || rangoInvalido || !vista?.filas.length
+              }
               className="boton-primario w-full justify-center"
               onClick={() => exportar("PDF")}
             >
@@ -240,7 +289,9 @@ export default function ReportesPage() {
               {ocupado ? "Generando…" : "Descargar PDF"}
             </button>
             <button
-              disabled={!farmacia || ocupado}
+              disabled={
+                !farmacia || ocupado || rangoInvalido || !vista?.filas.length
+              }
               className="boton-secundario w-full justify-center"
               onClick={() => exportar("XLS")}
             >
@@ -248,7 +299,7 @@ export default function ReportesPage() {
               Descargar Excel
             </button>
             <button
-              disabled={!farmacia || ocupado}
+              disabled={!farmacia || ocupado || rangoInvalido}
               className="w-full text-sm font-semibold text-acento disabled:opacity-50"
               onClick={() => exportar("XLS", true)}
             >
@@ -259,8 +310,50 @@ export default function ReportesPage() {
               final de mermas se documenta en el acta.
             </p>
           </section>
+          {vista && !rangoInvalido && (
+            <section className="panel min-w-0 lg:col-span-3">
+              <h2 className="font-semibold">
+                Vista previa · {vista.filas.length} filas
+              </h2>
+              <p className="my-3 text-xs text-muted">
+                Se muestran las primeras 5 filas. La descarga incluye todas las
+                coincidencias. No reconstruye stock de una fecha pasada ni
+                certifica cumplimiento sanitario.
+              </p>
+              {vista.filas.length ? (
+                <div className="overflow-x-auto">
+                  <table className="tabla">
+                    <thead>
+                      <tr>
+                        {vista.columnas.map((c) => (
+                          <th key={c} scope="col">
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vista.filas.slice(0, 5).map((f, i) => (
+                        <tr key={i}>
+                          {f.map((v, j) => (
+                            <td key={j}>{v}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p role="status" className="py-6 text-sm text-muted">
+                  No hay coincidencias con este alcance y período. Cambia los
+                  filtros.
+                </p>
+              )}
+            </section>
+          )}
         </div>
       )}
+      <HistorialReportes />
     </TransicionPagina>
   );
 }
