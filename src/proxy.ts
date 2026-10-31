@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { esRol, tieneAcceso } from "@/lib/permisos";
+import { tieneAcceso } from "@/lib/permisos";
+import { verificarAccesoVigente } from "@/lib/supabase/perfil-vigente";
 import type { Database } from "@/tipos/database";
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,23 +28,11 @@ export async function proxy(request: NextRequest) {
     response.cookies.getAll().forEach((c) => result.cookies.set(c));
     return result;
   };
-  const {
-    data: { user },
-  } = await db.auth.getUser();
-  if (!user) return mover("/login");
-  const { data: usuario } = await db
-    .from("usuario")
-    .select("id_perfil,activo")
-    .eq("id_usuario", user.id)
-    .single();
-  if (!usuario?.activo) return mover("/login?motivo=perfil");
-  const { data: perfil } = await db
-    .from("perfil")
-    .select("nombre")
-    .eq("id_perfil", usuario.id_perfil)
-    .single();
-  if (!esRol(perfil?.nombre)) return mover("/login?motivo=perfil");
-  if (!tieneAcceso(perfil.nombre, request.nextUrl.pathname))
+  const acceso = await verificarAccesoVigente(db);
+  if (!acceso.autenticado) return mover("/login");
+  const vigente = acceso.perfil;
+  if (!vigente) return mover("/login?motivo=perfil");
+  if (!tieneAcceso(vigente.rol, request.nextUrl.pathname))
     return mover("/dashboard?acceso=denegado");
   return response;
 }

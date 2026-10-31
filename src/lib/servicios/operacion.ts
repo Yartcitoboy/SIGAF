@@ -1,32 +1,32 @@
 import type { Inventario } from "@/tipos/database";
-import { leerTabla, solicitarDatos } from "./datos";
+import { solicitarDatos } from "./datos";
 import { calcularSemaforoLote } from "./semaforo";
-import { obtenerContextoSistema } from "./contexto";
 
 export async function obtenerOperacion() {
-  const [
-    inventarios,
-    lotes,
-    productos,
-    bodegas,
-    movimientos,
-    mermas,
-    sucursales,
-    farmacias,
-    config,
+  const base = await solicitarDatos<{
+    inventario: import("@/tipos/database").Inventario[];
+    lote: import("@/tipos/database").Lote[];
+    producto: import("@/tipos/database").Producto[];
+    bodega: import("@/tipos/database").Bodega[];
+    movimiento_inventario: import("@/tipos/database").MovimientoInventario[];
+    merma: import("@/tipos/database").Merma[];
+    sucursal: import("@/tipos/database").Sucursal[];
+    farmacia: import("@/tipos/database").Farmacia[];
+    configuracion: import("@/tipos/database").Configuracion[];
+    sistema: import("../datos/contexto").ContextoSistema;
+  }>({ accion: "operacion", alcance: "completo" });
+  const {
+    inventario: inventarios,
+    lote: lotes,
+    producto: productos,
+    bodega: bodegas,
+    movimiento_inventario: movimientos,
+    merma: mermas,
+    sucursal: sucursales,
+    farmacia: farmacias,
+    configuracion: config,
     sistema,
-  ] = await Promise.all([
-    leerTabla("inventario"),
-    leerTabla("lote"),
-    leerTabla("producto"),
-    leerTabla("bodega"),
-    leerTabla("movimiento_inventario"),
-    leerTabla("merma"),
-    leerTabla("sucursal"),
-    leerTabla("farmacia"),
-    leerTabla("configuracion"),
-    obtenerContextoSistema(),
-  ]);
+  } = base;
   const configuracion = config.find((c) => c.id === 1);
   if (!configuracion)
     throw new Error(
@@ -95,4 +95,26 @@ export async function operarStock(datos: {
   operacion: string;
 }) {
   await solicitarDatos({ accion: "operar", datos });
+}
+
+export async function obtenerConfiguracionOperacion() {
+  const base = await solicitarDatos<{
+    bodegasConStock: number[];
+    bodega: DatosOperacion["bodegas"];
+    sucursal: DatosOperacion["sucursales"];
+    farmacia: DatosOperacion["farmacias"];
+    configuracion: DatosOperacion["configuracion"][];
+    sistema: import("../datos/contexto").ContextoSistema;
+  }>({ accion: "operacion", alcance: "configuracion" });
+  const configuracion = base.configuracion.find((c) => c.id === 1);
+  if (!configuracion) throw new Error("Falta la configuración en Supabase.");
+  return {
+    bodegasConStock:base.bodegasConStock,
+    bodegas: base.bodega,
+    sucursales: base.sucursal,
+    farmacias: base.farmacia,
+    configuracion,
+    hoy: base.sistema.hoy,
+    ahora: base.sistema.ahora,
+  };
 }

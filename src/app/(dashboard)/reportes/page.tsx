@@ -16,6 +16,11 @@ import { guardarFila } from "@/lib/servicios/datos";
 import { prepararInformeVisible } from "@/lib/vistas/informe-visible";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import { HistorialReportes } from "@/componentes/reportes/historial-reportes";
+import { obtenerContextoSistema } from "@/lib/servicios/contexto";
+import {
+  periodoReporte,
+  archivoReporteSchema,
+} from "@/lib/vistas/archivo-reporte";
 export default function ReportesPage() {
   const consulta = useConsulta(obtenerOperacion);
   const [tipo, setTipo] = useState<TipoInforme>("INVENTARIO");
@@ -25,6 +30,7 @@ export default function ReportesPage() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [ocupado, setOcupado] = useState(false);
+  const [revisionHistorial, setRevisionHistorial] = useState(0);
   const farmacia = consulta.datos?.farmacias.find(
     (f) => String(f.id_farmacia) === empresa,
   );
@@ -59,6 +65,7 @@ export default function ReportesPage() {
     }
     setOcupado(true);
     try {
+      const emision = await obtenerContextoSistema();
       const filtro = {
         farmacia: farmacia.id_farmacia,
         sucursal: sucursal ? Number(sucursal) : undefined,
@@ -87,7 +94,7 @@ export default function ReportesPage() {
         "SIGAF-" +
         (completo ? "completo" : tipo.toLowerCase()) +
         "-" +
-        consulta.datos.hoy;
+        emision.hoy;
       if (!tablas.some((t) => t.filas.length)) {
         toast.info("No hay registros para los filtros seleccionados.");
         return;
@@ -100,7 +107,7 @@ export default function ReportesPage() {
               sucursales.find((s) => String(s.id_sucursal) === sucursal)
                 ?.direccion || "Todas las sucursales",
               filtroTexto,
-              new Date(consulta.datos.ahora),
+              new Date(emision.ahora),
             )
           : null;
       const libro =
@@ -111,14 +118,35 @@ export default function ReportesPage() {
                 farmacia: farmacia.razon_social,
                 rut: farmacia.rut,
                 filtros: filtroTexto,
+                direccion: farmacia.direccion,
+                director_tecnico: farmacia.director_tecnico,
               },
-              consulta.datos.ahora,
+              emision.ahora,
             )
           : null;
       await guardarFila("reporte", {
         tipo,
         formato,
+        contenido: archivoReporteSchema.parse({
+          version: 1,
+          farmacia: {
+            id_farmacia: farmacia.id_farmacia,
+            razon_social: farmacia.razon_social,
+            rut: farmacia.rut,
+            direccion: farmacia.direccion,
+            logo_url: farmacia.logo_url,
+            director_tecnico: farmacia.director_tecnico,
+          },
+          tablas,
+          filtros: filtroTexto,
+          ubicacion:
+            sucursales.find((s) => String(s.id_sucursal) === sucursal)
+              ?.direccion || "Todas las sucursales",
+          nombre,
+          emitido: emision.ahora,
+        }),
       });
+      setRevisionHistorial((n) => n + 1);
       if (pdf) pdf.save(nombre + ".pdf");
       if (libro) {
         const XLSX = await import("xlsx");
@@ -250,6 +278,35 @@ export default function ReportesPage() {
               En inventario las fechas filtran vencimientos. En mermas y
               movimientos filtran la fecha de operación.
             </p>
+            <div
+              className="flex flex-wrap gap-2"
+              aria-label="Períodos rápidos del informe"
+            >
+              {(
+                [
+                  ["mes", "Mes actual"],
+                  ["trimestre", "Último trimestre"],
+                  ["todo", "Ver todo"],
+                ] as const
+              ).map(([p, etiqueta]) => (
+                <button
+                  type="button"
+                  key={p}
+                  className="boton-secundario"
+                  onClick={() => {
+                    const rango = periodoReporte(consulta.datos!.hoy, p);
+                    setDesde(rango.desde);
+                    setHasta(rango.hasta);
+                  }}
+                >
+                  {etiqueta}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              Sin fechas se incluyen todos los registros del alcance elegido.
+              Último trimestre abarca el mes actual y los dos anteriores.
+            </p>
             <label className="block text-sm">
               Informe
               <select
@@ -353,7 +410,10 @@ export default function ReportesPage() {
           )}
         </div>
       )}
-      <HistorialReportes />
+      <HistorialReportes
+        revision={revisionHistorial}
+        hoy={consulta.datos?.hoy}
+      />
     </TransicionPagina>
   );
 }

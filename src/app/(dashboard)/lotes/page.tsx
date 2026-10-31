@@ -1,21 +1,30 @@
 "use client";
-import { Suspense, useState } from "react";
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
+import dynamic from "next/dynamic";
+import { Suspense, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
-import { ModalCrearLote } from "@/componentes/modales/modal-crear-lote";
+const ModalCrearLote = dynamic(() =>
+  import("@/componentes/modales/modal-crear-lote").then(
+    (m) => m.ModalCrearLote,
+  ),
+);
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
 import { calcularSemaforoLote } from "@/lib/servicios/semaforo";
 import { EtiquetaLote } from "@/componentes/productos/etiqueta-lote";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import { coincide, fechaVisible } from "@/lib/vistas/presentacion";
-import {
-  BotonDetalle,
-  DetalleProducto,
-} from "@/componentes/productos/detalle-producto";
+import { BotonDetalle } from "@/componentes/productos/boton-detalle";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
 export default function LotesPage() {
   return (
     <Suspense fallback={<EstadoDatos cargando error={null} />}>
@@ -35,24 +44,40 @@ function ContenidoLotes() {
   const [texto, setTexto] = useState("");
   const [estado, setEstado] = useState("");
   const [stock, setStock] = useState("");
+  const { pagina, cambiar } = usePaginaListado(
+    JSON.stringify([texto, estado, stock]),
+  );
   const limpiar = () => {
     setTexto("");
     setEstado("");
     setStock("");
   };
+  const datos = consulta.datos;
+  const porLote = useMemo(() => {
+    const mapa = new Map<number, import("@/tipos/database").Inventario[]>();
+    for (const i of datos?.inventario ?? []) {
+      const lista = mapa.get(i.id_lote) ?? [];
+      lista.push(i);
+      mapa.set(i.id_lote, lista);
+    }
+    return mapa;
+  }, [datos]);
+  const porProducto = useMemo(
+    () => new Map((datos?.productos ?? []).map((p) => [p.id_producto, p])),
+    [datos],
+  );
   const lotes =
     consulta.datos?.lotes
       .filter((l) => {
-        const cantidad = consulta
-          .datos!.inventario.filter((i) => i.id_lote === l.id_lote)
-          .reduce((s, i) => s + i.stock_actual, 0);
+        const cantidad = (porLote.get(l.id_lote) ?? []).reduce(
+          (s, i) => s + i.stock_actual,
+          0,
+        );
         return (
           coincide(
             texto,
             l.numero_lote,
-            consulta.datos!.productos.find(
-              (p) => p.id_producto === l.id_producto,
-            )?.nombre,
+            porProducto.get(l.id_producto)?.nombre,
           ) &&
           (!estado ||
             calcularSemaforoLote(
@@ -147,10 +172,8 @@ function ContenidoLotes() {
                 </tr>
               </thead>
               <tbody>
-                {lotes.map((l) => {
-                  const stocks = consulta.datos!.inventario.filter(
-                    (i) => i.id_lote === l.id_lote,
-                  );
+                {lotes.slice((pagina - 1) * 25, pagina * 25).map((l) => {
+                  const stocks = porLote.get(l.id_lote) ?? [];
                   const semaforo = calcularSemaforoLote(
                     l.fecha_vencimiento,
                     consulta.datos!.configuracion,
@@ -166,13 +189,7 @@ function ContenidoLotes() {
                           {l.numero_lote}
                         </BotonDetalle>
                       </td>
-                      <td>
-                        {
-                          consulta.datos!.productos.find(
-                            (p) => p.id_producto === l.id_producto,
-                          )?.nombre
-                        }
-                      </td>
+                      <td>{porProducto.get(l.id_producto)?.nombre}</td>
                       <td>{fechaVisible(l.fecha_vencimiento)}</td>
                       <td>
                         {stocks.reduce((a, i) => a + i.stock_actual, 0)} un.
@@ -203,7 +220,7 @@ function ContenidoLotes() {
             </table>
           </div>
         )}
-      {consulta.datos && (
+      {consulta.datos && abierto && (
         <ModalCrearLote
           abierto={abierto}
           alCerrar={() => setAbierto(false)}
@@ -235,6 +252,12 @@ function ContenidoLotes() {
           cerrar={() => setEtiqueta(null)}
         />
       )}
+      <Paginacion
+        pagina={pagina}
+        total={lotes.length}
+        cambiar={cambiar}
+        cargando={consulta.cargando}
+      />
     </TransicionPagina>
   );
 }

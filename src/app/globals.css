@@ -236,3 +236,17 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.entrada-pagina {
+  animation: entrada-pagina 180ms ease-out;
+}
+@keyframes entrada-pagina {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

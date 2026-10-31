@@ -14,7 +14,8 @@ export function GestionEntregaAlertas({
   soloPersonal?: boolean;
 }) {
   const consulta = useConsulta(obtenerEstadoEntrega, {
-      conservarDatosEnError: true,
+    conservarDatosEnError: true,
+    intervaloMs: 30000,
     }),
     [ocupado, setOcupado] = useState(false),
     [error, setError] = useState<string | null>(null),

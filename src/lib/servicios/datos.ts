@@ -1,8 +1,16 @@
 import type { Database } from "@/tipos/database";
 import type { ComandoDatos, TablaDatos } from "@/lib/datos/contrato";
+import { consumirLectura, descartarLecturas } from "./lectura-anticipada";
 
 type Fila<T extends TablaDatos> = Database["public"]["Tables"][T]["Row"];
-export async function solicitarDatos<T>(comando: ComandoDatos): Promise<T> {
+export async function solicitarDatos<T>(
+  comando: ComandoDatos,
+  usuario?: string,
+): Promise<T> {
+  if (["guardar", "operar", "recibir"].includes(comando.accion))
+    descartarLecturas();
+  const preparada = usuario ? consumirLectura<T>(usuario, comando) : undefined;
+  if (preparada) return preparada;
   const respuesta = await fetch("/api/datos", {
     method: "POST",
     cache: "no-store",

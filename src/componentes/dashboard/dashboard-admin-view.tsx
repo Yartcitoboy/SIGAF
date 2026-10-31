@@ -1,7 +1,14 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { DetalleProducto } from "@/componentes/productos/detalle-producto";
+import dynamic from "next/dynamic";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
 import {
   filtrarSucursal,
   resumirStock,
@@ -15,7 +22,7 @@ import { GraficoDistribucionSemaforo } from "@/componentes/graficos/grafico-dist
 import { GraficoVencimientosMeses } from "@/componentes/graficos/grafico-vencimientos-meses";
 export function DashboardAdminView({ datos: base }: { datos: DatosOperacion }) {
   const [sucursal, setSucursal] = useState("");
-  const [todos, setTodos] = useState(false);
+  const { pagina, cambiar } = usePaginaListado(sucursal);
   const [detalle, setDetalle] = useState<number | null>(null);
   const datos = filtrarSucursal(base, sucursal);
   const stock = resumirStock(
@@ -72,7 +79,6 @@ export function DashboardAdminView({ datos: base }: { datos: DatosOperacion }) {
             value={sucursal}
             onChange={(e) => {
               setSucursal(e.target.value);
-              setTodos(false);
             }}
           >
             <option value="">Todas las sucursales</option>
@@ -184,7 +190,7 @@ export function DashboardAdminView({ datos: base }: { datos: DatosOperacion }) {
               </tr>
             </thead>
             <tbody>
-              {(todos ? criticos : criticos.slice(0, 20)).map((i) => (
+              {criticos.slice((pagina - 1) * 25, pagina * 25).map((i) => (
                 <tr key={i.id_inventario}>
                   <td>
                     <p className="font-medium">{i.lote?.producto?.nombre}</p>
@@ -240,17 +246,13 @@ export function DashboardAdminView({ datos: base }: { datos: DatosOperacion }) {
             </tbody>
           </table>
         </div>
-        {criticos.length > 20 && (
-          <button
-            type="button"
-            className="boton-secundario m-4"
-            onClick={() => setTodos(!todos)}
-          >
-            {todos
-              ? "Mostrar los primeros 20"
-              : `Ver las ${criticos.length} existencias prioritarias`}
-          </button>
-        )}
+        <div className="px-5">
+          <Paginacion
+            pagina={pagina}
+            total={criticos.length}
+            cambiar={cambiar}
+          />
+        </div>
       </section>
       {detalle !== null && (
         <DetalleProducto

@@ -32,6 +32,7 @@ export function prepararInformeVisible(
       .map((b) => b.id_bodega),
   );
   const dentro = (fecha: string) => {
+    if (!filtro.desde && !filtro.hasta) return true;
     const dia = diaMovimiento(fecha);
     return (
       Boolean(dia) &&

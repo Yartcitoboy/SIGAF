@@ -2,6 +2,10 @@ import { comandoDatos, TABLAS, validarCampos } from "@/lib/datos/contrato";
 import { autorizar, ErrorHttp, respuestaError } from "@/lib/autorizacion";
 import { leerSupabaseExistente } from "@/lib/datos/supabase-existente";
 import type { Database } from "@/tipos/database";
+import { validarCodigoProducto } from "@/lib/datos/busqueda-codigo";
+import { ErrorCodigo } from "@/lib/servicios/codigo-medicamento";
+import { leerPaginaProductos } from "@/lib/datos/paginacion";
+import { todasLasFilas } from "@/lib/servicios/consulta";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -20,6 +24,92 @@ export async function POST(request: Request) {
         const resultado = await db.rpc("contexto_sigaf", {});
         if (resultado.error) throw new Error(resultado.error.message);
         data = resultado.data;
+      } else if (comando.accion === "campana") {
+        const resultado = await db
+          .from("notificacion")
+          .select("*", { count: "exact" })
+          .eq("id_usuario", usuario.id_usuario)
+          .neq("estado", "LEIDO")
+          .order("id_notificacion", { ascending: false })
+          .limit(5);
+        if (resultado.error) throw new Error(resultado.error.message);
+        data = { filas: resultado.data, total: resultado.count ?? 0 };
+      } else if (comando.accion === "inventario_pagina") {
+        const resultado = await db.rpc("pagina_inventario", {
+          p_pagina: comando.pagina,
+          p_texto: comando.texto,
+          p_bodega: comando.bodega ?? null,
+          p_estado: comando.estado,
+          p_orden: comando.orden,
+        });
+        if (resultado.error) throw new Error(resultado.error.message);
+        data = resultado.data;
+      } else if (comando.accion === "productos_pagina") {
+        data = await leerPaginaProductos(db, comando);
+      } else if (comando.accion === "operacion") {
+        const tablas =
+          comando.alcance === "completo"
+            ? ([
+                "inventario",
+                "lote",
+                "producto",
+                "bodega",
+                "movimiento_inventario",
+                "merma",
+                "sucursal",
+                "farmacia",
+                "configuracion",
+              ] as const)
+            : (["bodega", "sucursal", "farmacia", "configuracion"] as const);
+        const [filas, contexto] = await Promise.all([
+          Promise.all(
+            tablas.map(
+              async (tabla) =>
+                [
+                  tabla,
+                  await leerSupabaseExistente(db, tabla, {
+                    rol,
+                    id_usuario: usuario.id_usuario,
+                    id_sucursal: usuario.id_sucursal,
+                  }),
+                ] as const,
+            ),
+          ),
+          db.rpc("contexto_sigaf", {}),
+        ]);
+        if (contexto.error) throw new Error(contexto.error.message);
+        const bodegasConStock =
+          comando.alcance === "configuracion"
+            ? [
+                ...new Set(
+                  (
+                    await todasLasFilas((a, b) =>
+                      db
+                        .from("inventario")
+                        .select("id_bodega")
+                        .gt("stock_actual", 0)
+                        .order("id_inventario")
+                        .range(a, b),
+                    )
+                  ).map((i) => i.id_bodega),
+                ),
+              ]
+            : undefined;
+        data = {
+          ...Object.fromEntries(filas),
+          sistema: contexto.data,
+          bodegasConStock,
+        };
+      } else if (comando.accion === "reporte_detalle") {
+        if (rol !== "ADMIN")
+          throw new ErrorHttp("Esta consulta requiere Administración.", 403);
+        const resultado = await db
+          .from("reporte")
+          .select("*")
+          .eq("id_reporte", comando.id)
+          .single();
+        if (resultado.error) throw new Error(resultado.error.message);
+        data = resultado.data;
       } else if (comando.accion === "leer") {
         data = await leerSupabaseExistente(db, comando.tabla, {
           rol,
@@ -32,6 +122,15 @@ export async function POST(request: Request) {
           throw new ErrorHttp(
             "Esta escritura requiere un perfil de administración.",
             403,
+          );
+        if (
+          comando.tabla === "producto" &&
+          Object.hasOwn(comando.campos, "codigo_barras")
+        )
+          comando.campos.codigo_barras = await validarCodigoProducto(
+            db,
+            comando.campos.codigo_barras,
+            comando.id,
           );
         // Mantener cada tabla concreta preserva los tipos de escritura de PostgREST.
         const consulta = (() => {
@@ -98,8 +197,12 @@ export async function POST(request: Request) {
                 : db.from("notificacion").insert(campos);
             }
             case "reporte": {
+              const contenido = comando.campos.contenido;
               const campos = {
                 ...comando.campos,
+                ...(contenido && typeof contenido === "object"
+                  ? { contenido: { ...contenido, autor: usuario.nombre } }
+                  : {}),
                 id_usuario: usuario.id_usuario,
               } as Database["public"]["Tables"]["reporte"]["Update"];
               return comando.id
@@ -112,7 +215,14 @@ export async function POST(request: Request) {
           }
         })();
         const { data: filas, error } = await consulta.select("*");
-        if (error) throw new Error(error.message);
+        if (error) {
+          if (comando.tabla === "producto" && error.code === "23505")
+            throw new ErrorHttp(
+              "Ya existe un medicamento con ese código.",
+              409,
+            );
+          throw new Error(error.message);
+        }
         if (!filas?.length)
           throw new ErrorHttp(
             "Registro no encontrado o sin permiso de escritura.",
@@ -140,6 +250,8 @@ export async function POST(request: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
+    if (error instanceof ErrorCodigo)
+      return Response.json({ error: error.message }, { status: error.estado });
     return respuestaError(error);
   }
 }

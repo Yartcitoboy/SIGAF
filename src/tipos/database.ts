@@ -220,6 +220,16 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      pagina_inventario: {
+        Args: {
+          p_pagina: number;
+          p_texto: string;
+          p_bodega: number | null;
+          p_estado: string;
+          p_orden: string;
+        };
+        Returns: Json;
+      };
       contexto_sigaf: { Args: Record<string, never>; Returns: Json };
       recibir_lote: { Args: { p_datos: Json }; Returns: number };
       operar_stock: {
@@ -256,6 +266,12 @@ export type Json =
   | Json[];
 
 export interface Reporte {
+  archivo_emitido?: string | null;
+  archivo_filtros?: string | null;
+  archivo_farmacia?: string | null;
+  archivo_nombre?: string | null;
+  archivo_autor?: string | null;
+  contenido?: import("@/lib/vistas/archivo-reporte").ArchivoReporte | null;
   id_reporte: number;
   id_usuario: string; // UUID
   tipo: TipoReporte | string | null;

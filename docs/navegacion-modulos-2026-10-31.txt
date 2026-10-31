@@ -1,0 +1,40 @@
+NAVEGACIÓN ENTRE MÓDULOS — SIGAF — 31 de octubre de 2026
+Rama front-isa. Sin commit ni push. Complementa docs/optimizacion-web-2026-10-31.txt.
+
+Por qué seguía existiendo espera
+La primera optimización redujo filas y peticiones de datos, pero no todo el recorrido de navegación. El proxy esperaba a Auth, luego consultaba usuario y después perfil. La autorización del servidor repetía esa secuencia antes de consultar los datos. Son viajes remotos en serie, cuya latencia se suma. Además, haber desactivado por completo la precarga del menú obligaba a esperar al clic para preparar la ruta. Ese ajuste anterior perjudicaba la transición. Por último, la sesión observada en localhost:3000 utiliza Next en modo desarrollo: la primera apertura de una ruta puede incluir compilación, además de las consultas.
+
+Corrección aplicada
+1. Usuario activo y rol actual se consultan juntos, mediante la relación real usuario-perfil. Se mantiene el filtro por UUID del usuario autenticado y RLS.
+2. La comprobación real de Auth y la lectura del perfil se ejecutan en paralelo. El cuerpo del token obtenido mediante getSession solo aporta un identificador tentativo para anticipar la lectura: no autoriza nada. Se exige getUser válido, identidad coincidente, cuenta activa y rol permitido antes de devolver el resultado. No hay caché global de permisos ni se confía en el rol escrito en una cookie.
+3. Proxy y API reutilizan la misma función de verificación para conservar estas condiciones en ambos sitios.
+4. El menú precarga únicamente la ruta sobre la que la persona sitúa el cursor, el foco o inicia un toque. No se precargan automáticamente todos los módulos. Para Productos e Inventario se inicia también la primera página de 25 filas, en paralelo con la ruta y con autorización real del servidor. La respuesta se guarda solo en memoria del navegador, aislada por UUID y consulta, durante un máximo de cinco segundos y para un único consumo. No es una base local ni un almacenamiento persistente. Se descarta al abandonar el área de trabajo y al iniciar altas o cambios de stock; los filtros o páginas diferentes requieren otra consulta. Si no hay una lectura preparada válida, se consulta normalmente al entrar.
+5. Se añade loading.tsx para permitir transición progresiva y un indicador en el enlace pulsado. Es respuesta visual durante una carga real; no sustituye las consultas ni promete que la red sea instantánea.
+
+Qué permanece igual
+Login, cuentas, contraseñas, roles, sucursales, RLS, stock, FEFO y formatos de reportes. No se modifica ninguna tabla ni función de Supabase en esta corrección. No se eliminan las verificaciones del servidor para ganar velocidad.
+
+Pruebas
+78 pruebas aprobadas, lint y compilación de producción correctos. Los nuevos casos comprueban una sola consulta usuario-perfil, filtro por identidad, rechazo de cuenta inactiva o rol inválido, errores de consulta, lectura de permisos actualizados, rechazo de Auth aunque exista perfil y rechazo si la identidad tentativa no coincide con Auth.
+Se abre además la compilación real en http://localhost:3101/productos usando la sesión existente, sin copiar contraseñas ni claves. El servidor de desarrollo de localhost:3000 permanece disponible.
+
+Medición y límites
+Una primera interacción automatizada, antes del último ajuste de paralelismo, tardó 1.677 ms hasta mostrar Inventario y 2.252 ms hasta sus datos. Son tiempos del controlador del navegador, no una medición exacta de paint ni un promedio estadístico. No se pudo acceder a Resource Timing desde la herramienta; no se inventan mediciones de red. Se documenta aparte una comprobación final de navegación con la ruta preparada por foco. No debe interpretarse como comparación de condiciones idénticas ni promesa de tiempo fijo.
+La primera entrada en frío todavía depende de Supabase, la conexión, la renovación de sesión y, en desarrollo, la compilación. La versión de producción evita compilar al visitar cada módulo. No se han introducido datos almacenados en disco local ni se mantiene stock ficticio para ocultar esperas.
+
+Uso
+Para probar el resultado compilado durante esta sesión: http://localhost:3101/productos.
+Para iniciar esta versión después de detener el proceso, desde el proyecto ejecutar primero npm run build -- --webpack; una vez terminado, ejecutar npm run start -- --hostname localhost --port 3101. Son dos pasos separados. El puerto 3000 puede mantenerse para editar en desarrollo.
+
+Archivos principales
+src/lib/supabase/perfil-vigente.ts
+src/lib/autorizacion.ts
+src/proxy.ts
+src/componentes/layout/sidebar.tsx
+src/app/(dashboard)/loading.tsx
+ tests/navegacion.test.mjs
+
+Medición intermedia: la precarga exclusiva de ruta todavía dio 1.475 ms hasta pantalla y 2.264 ms hasta datos en el controlador. Por eso se añadió la preparación paralela de las primeras filas; no se presenta ese resultado intermedio como una mejora suficiente.
+COMPROBACIÓN FINAL
+Compilación de producción final verificada. En el recorrido Productos → Inventario, preparando ruta y datos mediante el foco del enlace, el controlador registró 984 ms hasta la pantalla y 992 ms hasta los 19 registros. La muestra inicial del mismo destino fue de 1.677/2.252 ms antes de los últimos cambios. Son muestras puntuales con preparación y control automatizado; no un promedio ni una garantía de rendimiento. El objetivo de reducir la espera encadenada se comprobó en ese recorrido. La entrada directa sin preparación sigue dependiendo de la red y de Supabase.
+La versión compilada final se deja disponible en http://localhost:3101/inventario. El modo desarrollo de localhost:3000 no se cerró. No se hicieron commits ni push. No se modificaron existencias, usuarios ni tablas durante esta corrección.

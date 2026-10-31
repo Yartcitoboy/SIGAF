@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import {useReducirMovimiento} from "@/lib/hooks/use-reducir-movimiento";
 
 interface ContadorAnimadoProps {
   valor: number;
@@ -21,7 +21,7 @@ export const ContadorAnimado: React.FC<ContadorAnimadoProps> = ({
   className = "",
 }) => {
   const [conteo, setConteo] = useState(0);
-  const reducirMovimiento = useReducedMotion();
+  const reducirMovimiento = useReducirMovimiento();
 
   useEffect(() => {
     // Respetar prefers-reduced-motion

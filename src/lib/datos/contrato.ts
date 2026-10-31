@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { archivoReporteSchema } from "../vistas/archivo-reporte";
 
 // Identificadores cerrados: nunca se acepta SQL ni nombres de columnas del navegador.
 export const TABLAS = {
@@ -29,7 +30,33 @@ const escalar = z.union([
 ]);
 export const comandoDatos = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("contexto") }).strict(),
+  z.object({accion:z.literal("campana")}).strict(),
+  z
+    .object({
+      accion: z.literal("operacion"),
+      alcance: z.enum(["completo", "configuracion"]).default("completo"),
+    })
+    .strict(),
+  z
+    .object({
+      accion: z.literal("productos_pagina"),
+      pagina: z.number().int().min(1).max(100000),
+      texto: z.string().trim().max(150),
+      categoria: z.number().int().positive().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      accion: z.literal("inventario_pagina"),
+      pagina: z.number().int().min(1).max(100000),
+      texto: z.string().trim().max(150),
+      bodega: z.number().int().positive().optional(),
+      estado: z.enum(["VERDE", "AMARILLO", "NARANJO", "VENCIDO", ""]),
+      orden: z.enum(["vencimiento", "stock", "nombre"]),
+    })
+    .strict(),
   z.object({ accion: z.literal("leer"), tabla }).strict(),
+  z.object({accion:z.literal("reporte_detalle"),id:z.number().int().positive()}).strict(),
   z
     .object({
       accion: z.literal("guardar"),
@@ -43,7 +70,7 @@ export const comandoDatos = z.discriminatedUnion("accion", [
         "reporte",
       ]),
       id: z.number().int().positive().optional(),
-      campos: z.record(z.string(), escalar),
+      campos: z.record(z.string(), z.union([escalar, archivoReporteSchema])),
     })
     .strict(),
   z
@@ -106,12 +133,21 @@ const CAMPOS: Record<
   sucursal: ["nombre", "direccion", "id_farmacia"],
   bodega: ["nombre", "ubicacion", "id_sucursal", "es_sala_ventas"],
   notificacion: ["estado"],
-  reporte: ["tipo", "formato"],
+  reporte: ["tipo", "formato", "contenido"],
 };
 export function validarCampos(
   comando: Extract<ComandoDatos, { accion: "guardar" }>,
 ) {
   const claves = Object.keys(comando.campos);
+  if (
+    claves.some(
+      (c) =>
+        typeof comando.campos[c] === "object" &&
+        comando.campos[c] !== null &&
+        (comando.tabla !== "reporte" || c !== "contenido"),
+    )
+  )
+    throw new Error("Contenido de escritura no permitido.");
   if (!claves.length || claves.some((c) => !CAMPOS[comando.tabla].includes(c)))
     throw new Error("Campos de escritura no permitidos.");
   if (

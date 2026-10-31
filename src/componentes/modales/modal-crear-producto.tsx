@@ -13,6 +13,7 @@ interface Props {
   alGuardarExitoso: () => void;
   categorias: Categoria[];
   producto?: Producto;
+  codigoInicial?: string;
 }
 export function ModalCrearProducto(props: Props) {
   return props.abierto ? (
@@ -24,6 +25,7 @@ function Formulario({
   alGuardarExitoso,
   categorias,
   producto,
+  codigoInicial,
 }: Props) {
   const { perfilActual } = useRol();
   const opciones = perfilActual.sistema.opciones;
@@ -190,7 +192,13 @@ function Formulario({
             <input
               name="codigo"
               maxLength={50}
-              defaultValue={producto?.codigo_barras ?? ""}
+              defaultValue={producto?.codigo_barras ?? codigoInicial ?? ""}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
               className="campo mt-1"
             />
           </label>

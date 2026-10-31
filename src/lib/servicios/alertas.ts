@@ -1,4 +1,10 @@
-import { leerTabla, guardarFila } from "./datos";
+import { leerTabla, guardarFila, solicitarDatos } from "./datos";
+export function obtenerCampana() {
+  return solicitarDatos<{
+    filas: import("@/tipos/database").Notificacion[];
+    total: number;
+  }>({ accion: "campana" });
+}
 export function obtenerNotificaciones() {
   return leerTabla("notificacion");
 }

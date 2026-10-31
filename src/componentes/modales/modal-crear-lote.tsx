@@ -10,9 +10,8 @@ import {
 } from "@/lib/servicios/lotes";
 import { SelectorCantidad } from "@/componentes/ui/selector-cantidad";
 import { formatearMontoCLP, leerMontoCLP } from "@/lib/vistas/formularios";
-import { leerGS1 } from "@/lib/servicios/gs1";
+import { EscanerCodigo } from "@/componentes/productos/escaner-codigo";
 import { validarVidaUtil } from "@/lib/servicios/isp";
-import { gtinValido } from "@/lib/vistas/presentacion";
 interface Props {
   abierto: boolean;
   alCerrar: () => void;
@@ -41,59 +40,30 @@ function FormularioLote({
   );
   const [lote, setLote] = useState("");
   const [fecha, setFecha] = useState("");
-  const [escaneo, setEscaneo] = useState("");
+  const [buscando, setBuscando] = useState(false);
+  const [fichaLeida, setFichaLeida] = useState<Producto | null>(null);
+  const [revision, setRevision] = useState(0);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fabricacion, setFabricacion] = useState("");
   const operacion = useRef(crypto.randomUUID());
-  const ficha = productos.find((p) => p.id_producto === Number(producto));
-  function escanear() {
-    try {
-      if (/^\d{8,14}$/.test(escaneo.trim())) {
-        if (!gtinValido(escaneo.trim()))
-          throw new Error(
-            "El dígito de control o la longitud del código no es válido. Revisa el envase o ingresa los datos manualmente.",
-          );
-        const encontrado = productos.find(
-          (p) =>
-            p.codigo_barras?.padStart(14, "0") ===
-            escaneo.trim().padStart(14, "0"),
-        );
-        if (!encontrado)
-          throw new Error("El código no está registrado en el catálogo.");
-        setProducto(String(encontrado.id_producto));
-        setLote("");
-        setFecha("");
-        setFabricacion("");
-        setError(null);
-        toast.info(
-          "Producto identificado. Ingresa el lote y vencimiento del envase.",
-        );
-        return;
-      }
-      const datos = leerGS1(escaneo);
-      if (!datos.gtin)
-        throw new Error(
-          "El escaneo no identifica el producto. No se aplicó al medicamento anterior; ingresa los datos manualmente.",
-        );
-      if (datos.gtin) {
-        const encontrado = productos.find(
-          (p) => p.codigo_barras?.padStart(14, "0") === datos.gtin,
-        );
-        if (!encontrado)
-          throw new Error("El código no está registrado en el catálogo.");
-        setProducto(String(encontrado.id_producto));
-      }
-      setLote(datos.lote || "");
-      setFecha(datos.vencimiento || "");
-      setFabricacion("");
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo leer el código.");
-    }
+  const ficha =
+    fichaLeida?.id_producto === Number(producto)
+      ? fichaLeida
+      : productos.find((p) => p.id_producto === Number(producto));
+  function limpiarLectura() {
+    setProducto("");
+    setFichaLeida(null);
+    setLote("");
+    setFecha("");
+    setFabricacion("");
+    setCosto("");
+    setRevision((n) => n + 1);
+    setError(null);
   }
   async function guardar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (ocupado || buscando) return;
     setError(null);
     const f = new FormData(e.currentTarget);
     const fabricacion = String(f.get("fabricacion") || "");
@@ -159,31 +129,17 @@ function FormularioLote({
     <Dialogo titulo="Recepción de lote" cerrar={alCerrar} ocupado={ocupado}>
       <form onSubmit={guardar} aria-busy={ocupado}>
         <fieldset disabled={ocupado} className="min-w-0 space-y-4">
-          <div className="rounded-xl bg-acento-suave p-3">
-            <label className="text-xs font-semibold">
-              Escanear GS1 DataMatrix
-              <input
-                autoFocus
-                value={escaneo}
-                onChange={(e) => setEscaneo(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    escanear();
-                  }
-                }}
-                className="campo mt-2"
-                placeholder="Escanea el código o pega su contenido"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={escanear}
-              className="mt-2 text-xs font-semibold text-acento"
-            >
-              Completar desde escaneo →
-            </button>
-          </div>
+          <EscanerCodigo
+            deshabilitado={ocupado}
+            alIniciar={limpiarLectura}
+            alActividad={setBuscando}
+            alEncontrar={(r) => {
+              setFichaLeida(r.producto);
+              setProducto(String(r.producto.id_producto));
+              setLote(r.lectura.lote ?? "");
+              setFecha(r.lectura.vencimiento ?? "");
+            }}
+          />
           <label className="block text-sm">
             Medicamento
             <select
@@ -194,13 +150,21 @@ function FormularioLote({
                 setProducto(e.target.value);
                 setLote("");
                 setFecha("");
-                setEscaneo("");
+                setFichaLeida(null);
                 setFabricacion("");
                 setError(null);
               }}
               className="campo mt-1"
             >
               <option value="">Selecciona un producto</option>
+              {fichaLeida &&
+                !productos.some(
+                  (p) => p.id_producto === fichaLeida.id_producto,
+                ) && (
+                  <option value={fichaLeida.id_producto}>
+                    {fichaLeida.nombre}
+                  </option>
+                )}
               {productos.map((p) => (
                 <option key={p.id_producto} value={p.id_producto}>
                   {p.nombre}
@@ -252,7 +216,7 @@ function FormularioLote({
                 className="campo mt-1"
               />
             </label>
-            <SelectorCantidad />
+            <SelectorCantidad key={revision} />
           </div>
           <label className="block text-sm">
             Costo unitario (CLP)
@@ -307,7 +271,10 @@ function FormularioLote({
               {error}
             </p>
           )}
-          <button disabled={ocupado} className="boton-primario">
+          <button
+            disabled={ocupado || buscando || !ficha}
+            className="boton-primario"
+          >
             {ocupado ? "Registrando…" : "Confirmar recepción"}
           </button>
         </fieldset>

@@ -1,0 +1,24 @@
+Reportes e historial — 31 de octubre de 2026
+
+Rol: Administración. Admin conserva el acceso a los reportes autorizados por Supabase; Bodeguero y Auxiliar no adquieren permisos nuevos. No se modificaron cuentas, contraseñas, stock ni operaciones.
+
+Cambios y finalidad:
+1. Historial: búsqueda combinada con tipo, formato y fechas de emisión inclusivas. Las emisiones con zona horaria se filtran por el día de Chile. Los registros históricos sin zona conservan su fecha de origen. Un rango invertido muestra un aviso. Limpiar filtros restaura todo.
+2. Períodos: Mes actual, Último trimestre (mes actual y dos anteriores) y Ver todo, independientes para informe e historial. Sin fechas se incluyen todos los registros del alcance elegido. En inventario se filtra vencimiento; en mermas/movimientos, fecha de operación. La selección de farmacia sigue siendo necesaria para elegir el membrete.
+3. Detalle: cualquier fila abre el panel lateral; también existe un botón accesible por teclado. Usa el mismo componente del detalle de producto, con Escape, cierre, bloqueo de fondo y restitución del foco. Muestra autor, fecha/hora con segundos, tipo, farmacia, sucursal/bodega y filtros archivados. Se presentan registros, unidades y valoración por cada tabla, evitando sumar stock y movimientos como si fueran lo mismo. La falta de costos no se interpreta como costo cero.
+4. Archivo: se añadió reporte.contenido (JSONB) mediante migración. Se conserva el contenido exportado, membrete, Director Técnico, filtros y hora obtenida de PostgreSQL al emitir; el servidor asigna el nombre del autor desde su sesión. No hay copias guardadas en almacenamiento local. Se mantienen las políticas RLS existentes: lectura e inserción para Admin, sin edición del historial desde la aplicación. La validación limita estructura, columnas y tamaño del archivo.
+5. Copia: vuelve a consultar el historial autorizado antes de descargar. Regenera PDF o Excel con el contenido archivado y no con el stock actual; no genera otra emisión. Preserva hojas del Excel completo y el membrete del PDF. La copia reproduce los datos; no promete identidad binaria del archivo original. El historial representa emisiones registradas, no una prueba de que el usuario guardó físicamente el archivo.
+6. Documentos: PDF conserva membrete legal, paginación y espacio de firma. Excel incorpora dirección, Director Técnico y espacio de firma en Identificación. No se inserta ni simula una firma electrónica.
+7. Histórico anterior: no contenía archivos ni filtros. Se conserva intacto, muestra lo disponible y deshabilita re-descarga. No se rellenan sus totales con datos actuales.
+
+Migración local: supabase/migrations/20261031045729_archivo_emisiones_reportes.sql
+Migración remota: 20261031050000, archivo_emisiones_reportes.
+Fuente de JSONB: https://supabase.com/docs/guides/database/json
+
+Verificación: 71 pruebas automatizadas aprobadas, tipos y revisión de código correctos. Pruebas específicas de filtros combinados, límites de fecha y cambio de año, datos antiguos, valoración parcial, rechazo de edición, persistencia PostgreSQL y membrete/firma en PDF y Excel. Compilación de producción verificada. Se comprueba además el flujo con la sesión real de Admin; los informes emitidos durante esa comprobación son informes reales y quedan en el historial.
+
+Seguridad: RLS sigue activo en reporte, con sus dos políticas originales. No se amplían permisos. Los avisos del asesor sobre correo privado, pg_net, RPC operativos y protección de contraseñas ya existían y no corresponden a este cambio.
+
+Trabajo en la rama front-isa. Sin commit ni push.
+
+Comprobación real completada: emisión #2 PDF (19 filas) y #3 Excel completo (19 filas de inventario, 3 mermas y 10 movimientos). Copias descargadas. El Excel original y su copia contienen las mismas cuatro hojas y datos. Re-descargar no aumentó las tres emisiones registradas; stock conservado: 2.275 unidades.

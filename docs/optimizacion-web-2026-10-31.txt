@@ -1,0 +1,42 @@
+OPTIMIZACIÓN DE SIGAF — 31 de octubre de 2026
+Rama front-isa. Sin commit ni push. Se conservaron los cambios anteriores de Reportes.
+
+CAUSAS ENCONTRADAS
+Cada carga de operación disparaba diez peticiones web independientes (inventario, lotes, productos, ubicaciones, movimientos, mermas, configuración y reloj). Cada petición repetía la autorización. El catálogo dibujaba todos sus productos. El historial consultaba todos los documentos archivados completos, aun sin abrirlos. Las pantallas se consultaban de nuevo cada 30 segundos y podían solapar solicitudes. La barra de navegación permitía precargar rutas todavía no abiertas.
+
+CAMBIOS Y FUNCIÓN DENTRO DEL SISTEMA
+1. Productos e Inventario: paginación real en el servidor, de 25 filas. Los filtros y la búsqueda se aplican sobre la base completa antes de limitar la página. Se mantiene el total de coincidencias y se ordena de forma estable con un identificador de desempate. Al cambiar filtros se regresa a la primera página. La búsqueda espera 300 ms desde la última tecla. Esto limita la transferencia y el número de filas del DOM sin ocultar el resto del catálogo.
+2. Inventario: función pagina_inventario de solo lectura, SECURITY INVOKER. Conserva las políticas RLS de cada tabla y el alcance del usuario. El riesgo y el día se calculan en PostgreSQL. No se introducen permisos elevados ni escritura de existencias.
+3. Operación: una petición agrupada reutiliza una autorización y consulta las tablas en paralelo. Los datos siguen procediendo de Supabase. Configuración solicita solo sus tablas y un conjunto de identificadores de bodegas con stock, conservando la validación contra la reasignación de una bodega con existencias.
+4. Listas: Lotes, Movimientos, Usuarios, Alertas, Historial y los listados del dashboard dibujan como máximo 25 filas o tarjetas por página. Se eligió paginación estricta en lugar de sumar una dependencia de virtualización: el DOM ya queda acotado y conserva tablas y controles accesibles. En Lotes se sustituyen búsquedas repetidas por mapas de producto y lote.
+5. Historial: el listado consulta metadatos pequeños (autor, fecha, farmacia, filtros y nombre del archivo), sin transportar todas las filas y logos de los informes. El contenido se consulta por su ID al abrir el panel y se vuelve a autorizar para la copia. Se conserva el comportamiento de archivos antiguos y la re-descarga PDF/Excel.
+6. Carga de código: formularios de alta/edición, paneles de detalle y dashboards por rol pasan a importación dinámica. El botón de detalle se separa del panel para que no lo cargue indirectamente. Los formularios se montan al abrirlos. Se desactiva la precarga automática de los enlaces del menú. PDF y Excel mantienen sus importaciones diferidas.
+7. Dependencias: se retiran framer-motion, date-fns, react-hook-form y @hookform/resolvers, que ya no se utilizan. No se instalan librerías nuevas. La entrada de página usa CSS; los contadores conservan su animación nativa y respetan reducir movimiento. Se elimina el contenedor de animaciones sin uso. Se conservan los SVG individuales de Lucide y los gráficos ligeros existentes. No hay imágenes de productos que requieran convertir a WebP/AVIF en este alcance.
+8. Recargas: intervalo general de dos minutos, campana de un minuto y estado de Gmail de 30 segundos durante su configuración. Las pestañas ocultas no hacen consultas periódicas; al volver a una pestaña se revalida si la consulta ya tiene más de 15 segundos. Las peticiones automáticas de un mismo componente no se solapan. Una recarga manual o posterior a una mutación fuerza una consulta nueva y las respuestas antiguas se descartan. No se presentan las filas de una página anterior como si fueran la nueva.
+9. Campana: consulta únicamente cinco avisos no leídos del usuario real y su contador total. No descarga todo el historial en cada módulo.
+10. Respuesta inmediata: marcar una alerta como leída actualiza primero la interfaz y revierte el estado si falla. El inventario no se descuenta ficticiamente: FEFO, vencimiento, holgura, concurrencia e idempotencia siguen confirmándose en el servidor. El formulario de dispensación conserva el saldo previsto y el estado de registro.
+
+ROLES
+Admin mantiene el alcance general autorizado. Bodeguero y Auxiliar mantienen su sucursal y las reglas operativas previas. La consulta paginada usa el usuario real, sin clave administrativa en el navegador. No se modifica el login, cuentas, contraseñas, permisos de stock ni los envíos de correo.
+
+MEDICIÓN
+Catálogo real: la primera página pasó de 214 productos transferidos/dibujados a 25 (88,3% menos filas iniciales); todos siguen accesibles en nueve páginas. Se comprobó segunda página con 25 filas y búsqueda global por F-16002/22 con una coincidencia. La carga de operación pasa de diez peticiones web a una, sin contar la campana independiente. Esto no significa que las nueve consultas SQL internas se hayan convertido en una.
+
+Código comprimido referenciado por los manifiestos de las rutas:
+inventario: 170.5 KiB → 103.1 KiB (39.6% menos).
+productos: 172.7 KiB → 101.6 KiB (41.2% menos).
+reportes: 172.0 KiB → 133.4 KiB (22.4% menos).
+dashboard: 176.5 KiB → 100.9 KiB (42.8% menos).
+Esta medición incluye referencias diferidas y no equivale al tráfico inicial exacto ni a segundos de navegación. Los JSON antes/después se conservan en docs. No se promete un porcentaje de velocidad a partir del peso de código. La compilación final de producción se verificó; en desarrollo Next sigue compilando cada ruta en su primera apertura. Para evaluar el rendimiento real se debe usar la compilación de producción, no comparar exclusivamente el primer acceso en npm run dev.
+
+VERIFICACIÓN
+74 pruebas automatizadas aprobadas, revisión de código y tipos sin errores, compilación de producción correcta. Se añadió cobertura de límite y separación de páginas, búsqueda fuera de la primera página, filtros, orden, validación de página, RLS de sucursal para los tres roles, rechazo anónimo, consulta de productos y petición agrupada de operación/configuración. Se verificaron desde la sesión real el catálogo, segunda página, búsqueda ISP, Inventario, filtro Caducado y panel de producto, además del Historial y su detalle cargado por ID. No se generaron movimientos ni se marcaron avisos reales como leídos durante estas comprobaciones.
+
+ALCANCE Y LÍMITES
+La paginación de servidor se aplica a Productos e Inventario. Los demás listados tienen paginación visual sobre su consulta autorizada; las vistas operativas y reportes que calculan métricas o FEFO todavía leen el alcance completo mediante la petición agrupada. No se limita el conjunto de lotes de FEFO a una página, porque alteraría la prioridad. Para volúmenes mucho mayores convendrá llevar las agregaciones de los dashboards y la preparación de exportaciones al servidor, y extender la paginación de servidor a movimientos e historial. No se cambió a Realtime ni se afirma actualización instantánea entre dispositivos; se conservan recarga manual y verificación del servidor al operar.
+
+DESPLIEGUE Y TRABAJO COMPARTIDO
+Migración local: supabase/migrations/20261031053112_paginacion_inventario.sql.
+Migración remota: 20261031053345, paginacion_inventario.
+Se mantiene la seguridad existente. El asesor no añadió avisos nuevos por esta función; persisten los avisos anteriores documentados de correo privado, extensión pg_net, RPC operativos y protección de contraseñas. No ejecutar a ciegas db push: el registro remoto usa sus propios timestamps. Ver supabase/aplicacion-remota-2026-10-31.json.
+Los cambios de código y dependencias quedan locales para revisión y commit del usuario.

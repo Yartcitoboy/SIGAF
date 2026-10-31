@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/componentes/layout/header";
@@ -7,9 +8,21 @@ import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { useRol } from "@/context/rol-context";
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
-import { DashboardAdminView } from "@/componentes/dashboard/dashboard-admin-view";
-import { DashboardBodegueroView } from "@/componentes/dashboard/dashboard-bodeguero-view";
-import { DashboardAuxiliarView } from "@/componentes/dashboard/dashboard-auxiliar-view";
+const DashboardAdminView = dynamic(() =>
+  import("@/componentes/dashboard/dashboard-admin-view").then(
+    (m) => m.DashboardAdminView,
+  ),
+);
+const DashboardBodegueroView = dynamic(() =>
+  import("@/componentes/dashboard/dashboard-bodeguero-view").then(
+    (m) => m.DashboardBodegueroView,
+  ),
+);
+const DashboardAuxiliarView = dynamic(() =>
+  import("@/componentes/dashboard/dashboard-auxiliar-view").then(
+    (m) => m.DashboardAuxiliarView,
+  ),
+);
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 function AvisoAcceso() {
   const parametros = useSearchParams();

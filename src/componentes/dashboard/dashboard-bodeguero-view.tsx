@@ -1,13 +1,21 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { DetalleProducto } from "@/componentes/productos/detalle-producto";
+import dynamic from "next/dynamic";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
 import { resumirStock, diaMovimiento } from "@/lib/vistas/presentacion";
 import { MapPin } from "lucide-react";
 import type { DatosOperacion } from "@/lib/servicios/operacion";
 import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
 import { Metrica } from "./metricas";
 export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
+  const { pagina, cambiar } = usePaginaListado("");
   const [detalle, setDetalle] = useState<number | null>(null);
   const stock = resumirStock(
     datos.inventario,
@@ -70,7 +78,7 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
           Retiro y revisión por ubicación de pasillo / repisa.
         </p>
         <div className="mt-5 divide-y divide-separador">
-          {pendientes.map((i) => (
+          {pendientes.slice((pagina - 1) * 25, pagina * 25).map((i) => (
             <article
               key={i.id_inventario}
               className="flex flex-wrap items-center justify-between gap-4 py-4"
@@ -110,6 +118,7 @@ export function DashboardBodegueroView({ datos }: { datos: DatosOperacion }) {
           )}
         </div>
       </section>
+      <Paginacion pagina={pagina} total={pendientes.length} cambiar={cambiar} />
       {detalle !== null && (
         <DetalleProducto
           referencia={{ tipo: "lote", id: detalle }}

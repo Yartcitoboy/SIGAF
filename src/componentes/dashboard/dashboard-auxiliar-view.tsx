@@ -1,4 +1,6 @@
 "use client";
+import { usePaginaListado, useBusquedaDiferida } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { ShieldCheck, MapPin, Search } from "lucide-react";
@@ -23,9 +25,11 @@ export function DashboardAuxiliarView({
   const [cantidad, setCantidad] = useState(1),
     [ocupado, setOcupado] = useState(false);
   const claves = useRef<Record<number, string>>({});
+  const textoBusqueda = useBusquedaDiferida(busqueda);
+  const { pagina, cambiar } = usePaginaListado(textoBusqueda);
   const productos = datos.productos.filter((p) =>
     coincide(
-      busqueda,
+      textoBusqueda,
       p.nombre,
       p.codigo_barras,
       p.principio_activo,
@@ -118,7 +122,7 @@ export function DashboardAuxiliarView({
           aria-label="Buscar medicamento"
         />
         <div className="mt-4 max-h-[520px] space-y-2 overflow-y-auto">
-          {productos.map((p) => (
+          {productos.slice((pagina - 1) * 25, pagina * 25).map((p) => (
             <button
               key={p.id_producto}
               disabled={ocupado}
@@ -150,6 +154,12 @@ export function DashboardAuxiliarView({
             </p>
           )}
         </div>
+        <Paginacion
+          pagina={pagina}
+          total={productos.length}
+          cambiar={cambiar}
+          cargando={ocupado}
+        />
       </section>
       <section className="space-y-4 lg:col-span-2">
         {filtrarPorUbicacion && (

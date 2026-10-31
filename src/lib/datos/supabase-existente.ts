@@ -92,7 +92,13 @@ export async function leerSupabaseExistente(
   return todasLasFilas((a, b) => {
     let consulta = db
       .from(tabla)
-      .select(tabla === "usuario" ? COLUMNAS_USUARIO : "*")
+      .select(
+        tabla === "usuario"
+          ? COLUMNAS_USUARIO
+          : tabla === "reporte"
+            ? "id_reporte,id_usuario,tipo,formato,fecha_generacion,archivo_emitido:contenido->>emitido,archivo_filtros:contenido->>filtros,archivo_farmacia:contenido->farmacia->>razon_social,archivo_nombre:contenido->>nombre,archivo_autor:contenido->>autor"
+            : "*",
+      )
       .order(TABLAS[tabla], {
         ascending: ![
           "notificacion",

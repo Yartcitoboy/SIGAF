@@ -1,27 +1,33 @@
 "use client";
-import { useState } from "react";
+import { useRol } from "@/context/rol-context";
+import dynamic from "next/dynamic";
+import { useState, useCallback } from "react";
 import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
 import { SemaforoBadge } from "@/componentes/ui/semaforo-badge";
 import { useConsulta } from "@/lib/hooks/use-consulta";
-import { obtenerOperacion } from "@/lib/servicios/operacion";
-import {
-  BotonDetalle,
-  DetalleProducto,
-} from "@/componentes/productos/detalle-producto";
+import { obtenerPaginaInventario } from "@/lib/servicios/listados";
+import { useBusquedaDiferida, usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
+import { BotonDetalle } from "@/componentes/productos/boton-detalle";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
-import {
-  coincide,
-  tipoUbicacion,
-  fechaVisible,
-} from "@/lib/vistas/presentacion";
+import { tipoUbicacion, fechaVisible } from "@/lib/vistas/presentacion";
 export default function InventarioPage() {
-  const consulta = useConsulta(obtenerOperacion);
+  const { perfilActual } = useRol();
   const [texto, setTexto] = useState("");
   const [bodega, setBodega] = useState("");
-  const [estado, setEstado] = useState("");
-  const [orden, setOrden] = useState("vencimiento");
+  const [estado, setEstado] = useState<
+    "" | "VERDE" | "AMARILLO" | "NARANJO" | "VENCIDO"
+  >("");
+  const [orden, setOrden] = useState<"vencimiento" | "stock" | "nombre">(
+    "vencimiento",
+  );
   const [detalle, setDetalle] = useState<number | null>(null);
   const limpiar = () => {
     setTexto("");
@@ -29,32 +35,24 @@ export default function InventarioPage() {
     setEstado("");
     setOrden("vencimiento");
   };
-  const filas =
-    consulta.datos?.inventario
-      .filter(
-        (i) =>
-          (!bodega || String(i.id_bodega) === bodega) &&
-          (!estado || i.estado_semaforo === estado) &&
-          coincide(
-            texto,
-            i.lote?.producto?.nombre,
-            i.lote?.producto?.codigo_barras,
-            i.lote?.producto?.principio_activo,
-            i.lote?.numero_lote,
-          ),
-      )
-      .sort((a, b) =>
-        orden === "stock"
-          ? a.stock_actual - b.stock_actual
-          : orden === "nombre"
-            ? (a.lote?.producto?.nombre ?? "").localeCompare(
-                b.lote?.producto?.nombre ?? "",
-                "es",
-              )
-            : (a.lote?.fecha_vencimiento ?? "").localeCompare(
-                b.lote?.fecha_vencimiento ?? "",
-              ),
-      ) ?? [];
+  const busqueda = useBusquedaDiferida(texto);
+  const { pagina, cambiar } = usePaginaListado(
+    JSON.stringify([busqueda, bodega, estado, orden]),
+  );
+  const cargar = useCallback(
+    () =>
+      obtenerPaginaInventario(
+        pagina,
+        busqueda,
+        bodega,
+        estado,
+        orden,
+        perfilActual.id_usuario,
+      ),
+    [pagina, busqueda, bodega, estado, orden, perfilActual.id_usuario],
+  );
+  const consulta = useConsulta(cargar);
+  const filas = consulta.datos?.inventario ?? [];
   return (
     <TransicionPagina>
       <Header
@@ -86,7 +84,7 @@ export default function InventarioPage() {
           aria-label="Riesgo"
           className="campo w-auto!"
           value={estado}
-          onChange={(e) => setEstado(e.target.value)}
+          onChange={(e) => setEstado(e.target.value as typeof estado)}
         >
           <option value="">Todos los estados</option>
           {[
@@ -104,7 +102,7 @@ export default function InventarioPage() {
           aria-label="Orden del inventario"
           className="campo w-auto!"
           value={orden}
-          onChange={(e) => setOrden(e.target.value)}
+          onChange={(e) => setOrden(e.target.value as typeof orden)}
         >
           <option value="vencimiento">Vencimiento más próximo</option>
           <option value="stock">Menor stock primero</option>
@@ -114,7 +112,7 @@ export default function InventarioPage() {
       {consulta.datos && (
         <ResumenConsulta
           cantidad={filas.length}
-          total={consulta.datos.inventario.length}
+          total={consulta.datos.total}
           actualizado={consulta.actualizado}
           recargar={consulta.recargar}
           cargando={consulta.cargando}
@@ -186,10 +184,17 @@ export default function InventarioPage() {
             </table>
           </div>
         )}
+      {consulta.datos && (
+        <Paginacion
+          pagina={pagina}
+          total={consulta.datos.total}
+          cambiar={cambiar}
+          cargando={consulta.cargando}
+        />
+      )}
       {detalle !== null && consulta.datos && (
         <DetalleProducto
           referencia={{ tipo: "lote", id: detalle }}
-          datos={consulta.datos}
           cerrar={() => setDetalle(null)}
         />
       )}

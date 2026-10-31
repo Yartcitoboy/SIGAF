@@ -1,6 +1,12 @@
 import type { DatosOperacion } from "./operacion";
 import type { Farmacia } from "@/tipos/database";
-import { leerTabla } from "./datos";
+import { leerTabla, solicitarDatos } from "./datos";
+export async function obtenerReporteArchivado(id: number) {
+  return solicitarDatos<import("@/tipos/database").Reporte>({
+    accion: "reporte_detalle",
+    id,
+  });
+}
 import { nombreResponsable } from "../vistas/responsables";
 export async function obtenerHistorialReportes() {
   const [reportes, personas] = await Promise.all([
@@ -277,7 +283,13 @@ export async function crearPDF(
 }
 export async function crearLibroExcel(
   tablas: TablaReporte[],
-  identidad: { farmacia: string; rut: string; filtros: string },
+  identidad: {
+    farmacia: string;
+    rut: string;
+    filtros: string;
+    direccion?: string | null;
+    director_tecnico?: string | null;
+  },
   emitido: string,
 ) {
   const XLSX = await import("xlsx");
@@ -301,6 +313,7 @@ export async function crearLibroExcel(
     XLSX.utils.aoa_to_sheet([
       ["Farmacia", identidad.farmacia],
       ["RUT", identidad.rut],
+      ["Dirección", identidad.direccion ?? ""],
       ["Filtros", identidad.filtros],
       [
         "Emisión (Chile)",
@@ -308,6 +321,11 @@ export async function crearLibroExcel(
           timeZone: "America/Santiago",
         }),
       ],
+      [
+        "Director Técnico / Químico Farmacéutico",
+        identidad.director_tecnico || "Nombre: ______________________________",
+      ],
+      ["Firma Director Técnico", "______________________________________"],
     ]),
     "Identificación",
   );

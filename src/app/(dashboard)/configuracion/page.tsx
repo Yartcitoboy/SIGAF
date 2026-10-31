@@ -5,10 +5,7 @@ import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
 import { useConsulta } from "@/lib/hooks/use-consulta";
-import {
-  obtenerOperacion,
-  type DatosOperacion,
-} from "@/lib/servicios/operacion";
+import { obtenerConfiguracionOperacion } from "@/lib/servicios/operacion";
 import {
   guardarConfiguracion,
   guardarFarmacia,
@@ -18,7 +15,7 @@ import type { Farmacia } from "@/tipos/database";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import { rutValido, tipoUbicacion } from "@/lib/vistas/presentacion";
 export default function ConfiguracionPage() {
-  const consulta = useConsulta(obtenerOperacion);
+  const consulta = useConsulta(obtenerConfiguracionOperacion);
   return (
     <TransicionPagina>
       <Header
@@ -48,7 +45,7 @@ function Formularios({
   datos,
   recargar,
 }: {
-  datos: DatosOperacion;
+  datos: Awaited<ReturnType<typeof obtenerConfiguracionOperacion>>;
   recargar: () => Promise<void>;
 }) {
   const [ocupado, setOcupado] = useState(false);
@@ -157,9 +154,7 @@ function Formularios({
       tipo === "bodega" &&
       b &&
       Number(f.get("sucursal")) !== b.id_sucursal &&
-      datos.inventario.some(
-        (i) => i.id_bodega === b.id_bodega && i.stock_actual > 0,
-      )
+      datos.bodegasConStock.includes(b.id_bodega)
     ) {
       toast.error(
         "No reasignes una bodega con existencias desde este formulario. Requiere un procedimiento de traslado auditado.",

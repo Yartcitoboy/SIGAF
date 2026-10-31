@@ -1,0 +1,21 @@
+{
+  "fecha_chile": "2026-10-31",
+  "proyecto": "nkqxhpiagkcfvxbytarn",
+  "migraciones": [
+    {
+      "archivo": "migrations/20261031045729_archivo_emisiones_reportes.sql",
+      "version_remota": "20261031050000",
+      "nombre_remoto": "archivo_emisiones_reportes",
+      "sha256": "d262d626e6a21884ec76b537549e21e40981fdba8408709abfae20c6b62e1b57"
+    },
+    {
+      "archivo": "migrations/20261031053112_paginacion_inventario.sql",
+      "version_remota": "20261031053345",
+      "nombre_remoto": "paginacion_inventario",
+      "sha256": "2cb8a2ae531b3d09372ed163311037dbf06f887463c381476b975d20dfbe419d"
+    }
+  ],
+  "rls_ampliado": false,
+  "pruebas_aprobadas": 74,
+  "sin_commit_ni_push": true
+}

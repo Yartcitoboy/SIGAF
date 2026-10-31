@@ -1,59 +1,80 @@
 "use client";
-import { useState } from "react";
+import { EscanerCodigo } from "@/componentes/productos/escaner-codigo";
+import dynamic from "next/dynamic";
+import { useState, useCallback } from "react";
 import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
-import { ModalCrearProducto } from "@/componentes/modales/modal-crear-producto";
+const ModalCrearProducto = dynamic(() =>
+  import("@/componentes/modales/modal-crear-producto").then(
+    (m) => m.ModalCrearProducto,
+  ),
+);
 import { useConsulta } from "@/lib/hooks/use-consulta";
-import { obtenerProductos, obtenerCategorias } from "@/lib/servicios/productos";
+import { obtenerPaginaProductos } from "@/lib/servicios/listados";
+import { useBusquedaDiferida, usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
 import { useRol } from "@/context/rol-context";
 import type { Producto } from "@/tipos/database";
-import { coincide } from "@/lib/vistas/presentacion";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
-import {
-  BotonDetalle,
-  DetalleProducto,
-} from "@/componentes/productos/detalle-producto";
-async function cargar() {
-  const [productos, categorias] = await Promise.all([
-    obtenerProductos(),
-    obtenerCategorias(),
-  ]);
-  return { productos, categorias };
-}
+import { BotonDetalle } from "@/componentes/productos/boton-detalle";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
 export default function ProductosPage() {
-  const consulta = useConsulta(cargar);
-  const { rolActual } = useRol();
+  const { rolActual, perfilActual } = useRol();
   const [texto, setTexto] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [codigoInicial, setCodigoInicial] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [producto, setProducto] = useState<Producto | undefined>();
   const [detalle, setDetalle] = useState<number | null>(null);
-  const tieneRegistroIsp = consulta.datos?.productos.some((p) =>
-    Object.hasOwn(p, "registro_isp"),
+  const busqueda = useBusquedaDiferida(texto);
+  const { pagina, cambiar } = usePaginaListado(
+    JSON.stringify([busqueda, categoria]),
   );
+  const cargar = useCallback(
+    () =>
+      obtenerPaginaProductos(
+        pagina,
+        busqueda,
+        categoria,
+        perfilActual.id_usuario,
+      ),
+    [pagina, busqueda, categoria, perfilActual.id_usuario],
+  );
+  const consulta = useConsulta(cargar);
+  const tieneRegistroIsp = true;
   const limpiar = () => {
     setTexto("");
     setCategoria("");
   };
-  const filas =
-    consulta.datos?.productos.filter(
-      (p) =>
-        (!categoria || String(p.id_categoria) === categoria) &&
-        coincide(
-          texto,
-          p.nombre,
-          p.codigo_barras,
-          p.principio_activo,
-          p.descripcion,
-          p.registro_isp,
-        ),
-    ) ?? [];
+  const filas = consulta.datos?.productos ?? [];
   return (
     <TransicionPagina>
       <Header
         titulo="Catálogo de medicamentos"
         subtitulo="Productos y categorías consultados directamente desde Supabase."
+      />
+      <EscanerCodigo
+        alEncontrar={(r) => {
+          setCodigoInicial("");
+          if (rolActual === "ADMIN") {
+            setProducto(r.producto);
+            setAbierto(true);
+          } else setDetalle(r.producto.id_producto);
+        }}
+        alNoEncontrado={
+          rolActual === "ADMIN"
+            ? (codigo) => {
+                setProducto(undefined);
+                setCodigoInicial(codigo);
+                setAbierto(true);
+              }
+            : undefined
+        }
       />
       <div className="flex flex-wrap gap-3">
         <input
@@ -82,6 +103,7 @@ export default function ProductosPage() {
             className="boton-primario"
             onClick={() => {
               setProducto(undefined);
+              setCodigoInicial("");
               setAbierto(true);
             }}
           >
@@ -92,7 +114,7 @@ export default function ProductosPage() {
       {consulta.datos && (
         <ResumenConsulta
           cantidad={filas.length}
-          total={consulta.datos.productos.length}
+          total={consulta.datos.total}
           unidad="productos · Supabase"
           actualizado={consulta.actualizado}
           recargar={consulta.recargar}
@@ -169,9 +191,18 @@ export default function ProductosPage() {
             </table>
           </div>
         )}
-      {consulta.datos && rolActual === "ADMIN" && (
+      {consulta.datos && (
+        <Paginacion
+          pagina={pagina}
+          total={consulta.datos.total}
+          cambiar={cambiar}
+          cargando={consulta.cargando}
+        />
+      )}
+      {consulta.datos && abierto && rolActual === "ADMIN" && (
         <ModalCrearProducto
           abierto={abierto}
+          codigoInicial={codigoInicial}
           producto={producto}
           alCerrar={() => setAbierto(false)}
           alGuardarExitoso={consulta.recargar}

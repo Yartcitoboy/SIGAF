@@ -6,10 +6,12 @@ export function PanelLateral({
   titulo,
   cerrar,
   children,
+  etiquetaCerrar = "Cerrar detalle del producto",
 }: {
   titulo: string;
   cerrar: () => void;
   children: React.ReactNode;
+  etiquetaCerrar?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -62,7 +64,7 @@ export function PanelLateral({
             type="button"
             autoFocus
             onClick={cerrar}
-            aria-label="Cerrar detalle del producto"
+            aria-label={etiquetaCerrar}
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-muted transition hover:bg-elevado hover:text-tinta"
           >
             <X size={21} />

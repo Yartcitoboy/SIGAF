@@ -1,4 +1,7 @@
 "use client";
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
+import dynamic from "next/dynamic";
 import { Suspense, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -17,10 +20,12 @@ import {
   diaMovimiento,
   fechaHoraVisible,
 } from "@/lib/vistas/presentacion";
-import {
-  BotonDetalle,
-  DetalleProducto,
-} from "@/componentes/productos/detalle-producto";
+import { BotonDetalle } from "@/componentes/productos/boton-detalle";
+const DetalleProducto = dynamic(() =>
+  import("@/componentes/productos/detalle-producto").then(
+    (m) => m.DetalleProducto,
+  ),
+);
 export default function MovimientosPage() {
   return (
     <Suspense fallback={<EstadoDatos cargando error={null} />}>
@@ -48,6 +53,9 @@ function ContenidoMovimientos() {
   const [cantidad, setCantidad] = useState(0);
   const [destino, setDestino] = useState("");
   const [motivo, setMotivo] = useState("");
+  const { pagina, cambiar } = usePaginaListado(
+    JSON.stringify([texto, filtroTipo, desde, hasta, ubicacion]),
+  );
   const limpiar = () => {
     setTexto("");
     setFiltroTipo("");
@@ -266,7 +274,7 @@ function ContenidoMovimientos() {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((m) => (
+                {filas.slice((pagina - 1) * 25, pagina * 25).map((m) => (
                   <tr key={m.id_movimiento}>
                     <td className="whitespace-nowrap">
                       {fechaHoraVisible(m.fecha)}
@@ -505,6 +513,12 @@ function ContenidoMovimientos() {
           </form>
         </Dialogo>
       )}
+      <Paginacion
+        pagina={pagina}
+        total={filas.length}
+        cambiar={cambiar}
+        cargando={consulta.cargando}
+      />
     </TransicionPagina>
   );
 }

@@ -1,9 +1,16 @@
 "use client";
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
-import { ModalCrearUsuario } from "@/componentes/modales/modal-crear-usuario";
+const ModalCrearUsuario = dynamic(() =>
+  import("@/componentes/modales/modal-crear-usuario").then(
+    (m) => m.ModalCrearUsuario,
+  ),
+);
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import {
   obtenerUsuarios,
@@ -27,6 +34,7 @@ export default function UsuariosPage() {
   const [rol, setRol] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | undefined>();
+  const { pagina, cambiar } = usePaginaListado(JSON.stringify([texto, rol]));
   const limpiar = () => {
     setTexto("");
     setRol("");
@@ -112,7 +120,7 @@ export default function UsuariosPage() {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((u) => (
+                {filas.slice((pagina - 1) * 25, pagina * 25).map((u) => (
                   <tr key={u.id_usuario}>
                     <td className="font-medium">{u.nombre}</td>
                     <td>{u.email}</td>
@@ -164,7 +172,7 @@ export default function UsuariosPage() {
             </table>
           </div>
         )}
-      {consulta.datos && (
+      {consulta.datos && abierto && (
         <ModalCrearUsuario
           abierto={abierto}
           usuario={usuario}
@@ -174,6 +182,12 @@ export default function UsuariosPage() {
           sucursales={consulta.datos.sucursales}
         />
       )}
+      <Paginacion
+        pagina={pagina}
+        total={filas.length}
+        cambiar={cambiar}
+        cargando={consulta.cargando}
+      />
     </TransicionPagina>
   );
 }

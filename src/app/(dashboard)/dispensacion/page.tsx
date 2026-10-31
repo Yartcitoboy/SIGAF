@@ -1,9 +1,14 @@
 "use client";
+import dynamic from "next/dynamic";
 import { Header } from "@/componentes/layout/header";
 import { EstadoDatos } from "@/componentes/ui/estado-datos";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import { TransicionPagina } from "@/componentes/animaciones/transicion-pagina";
-import { DashboardAuxiliarView } from "@/componentes/dashboard/dashboard-auxiliar-view";
+const DashboardAuxiliarView = dynamic(() =>
+  import("@/componentes/dashboard/dashboard-auxiliar-view").then(
+    (m) => m.DashboardAuxiliarView,
+  ),
+);
 import { useConsulta } from "@/lib/hooks/use-consulta";
 import { obtenerOperacion } from "@/lib/servicios/operacion";
 

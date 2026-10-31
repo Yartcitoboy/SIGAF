@@ -1,4 +1,6 @@
 "use client";
+import { usePaginaListado } from "@/lib/hooks/use-listado";
+import { Paginacion } from "@/componentes/ui/paginacion";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Header } from "@/componentes/layout/header";
@@ -19,6 +21,9 @@ export default function AlertasPage() {
   const [ocupado, setOcupado] = useState<number | null>(null);
   const [texto, setTexto] = useState("");
   const [tipo, setTipo] = useState("");
+  const { pagina, cambiar } = usePaginaListado(
+    JSON.stringify([texto, tipo, pendientes]),
+  );
   const limpiar = () => {
     setPendientes(false);
     setTexto("");
@@ -39,6 +44,12 @@ export default function AlertasPage() {
       ) ?? [];
   async function atender(id: number) {
     setOcupado(id);
+    const anterior = consulta.datos?.find((n) => n.id_notificacion === id);
+    consulta.actualizarDatos((datos) =>
+      datos.map((n) =>
+        n.id_notificacion === id ? { ...n, estado: "LEIDO" } : n,
+      ),
+    );
     try {
       await marcarLeida(id);
       await consulta.recargar();
@@ -46,6 +57,12 @@ export default function AlertasPage() {
         "Notificación marcada como leída. Esto no resuelve el incidente.",
       );
     } catch (e) {
+      if (anterior)
+        consulta.actualizarDatos((datos) =>
+          datos.map((n) =>
+            n.id_notificacion === id ? { ...n, estado: anterior.estado } : n,
+          ),
+        );
       toast.error(e instanceof Error ? e.message : "No se pudo atender.");
     } finally {
       setOcupado(null);
@@ -112,7 +129,7 @@ export default function AlertasPage() {
       />
       {consulta.datos && !consulta.cargando && !consulta.error && (
         <div className="space-y-3">
-          {filas.map((n) => (
+          {filas.slice((pagina - 1) * 25, pagina * 25).map((n) => (
             <article
               key={n.id_notificacion}
               className="panel flex flex-wrap items-center justify-between gap-4"
@@ -152,6 +169,12 @@ export default function AlertasPage() {
           ))}
         </div>
       )}
+      <Paginacion
+        pagina={pagina}
+        total={filas.length}
+        cambiar={cambiar}
+        cargando={consulta.cargando}
+      />
     </TransicionPagina>
   );
 }

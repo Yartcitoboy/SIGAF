@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { prepararListado } from "@/lib/servicios/listados";
+import { descartarLecturas } from "@/lib/servicios/lectura-anticipada";
+import { useState, useEffect } from "react";
+import Link, { useLinkStatus } from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Boxes,
@@ -34,7 +36,13 @@ const modulos = [
 ];
 export function Sidebar() {
   const pathname = usePathname();
-  const { tieneAccesoAModulo } = useRol();
+  const router = useRouter();
+  useEffect(() => () => descartarLecturas(), []);
+  const { tieneAccesoAModulo, perfilActual } = useRol();
+  const preparar = (href: string) => {
+    router.prefetch(href);
+    prepararListado(href, perfilActual.id_usuario);
+  };
   const [abierto, setAbierto] = useState(false);
   return (
     <aside className="barra-lateral sticky top-0 z-30 shrink-0 md:h-screen md:w-60">
@@ -84,6 +92,10 @@ export function Sidebar() {
               <Link
                 key={href}
                 href={href}
+                prefetch={false}
+                onMouseEnter={() => preparar(href)}
+                onFocus={() => preparar(href)}
+                onTouchStart={() => preparar(href)}
                 aria-current={pathname === href ? "page" : undefined}
                 onClick={() => setAbierto(false)}
                 className={
@@ -95,11 +107,20 @@ export function Sidebar() {
               >
                 <Icono size={18} />
                 {nombre}
+                <EstadoNavegacion />
               </Link>
             ))}
         </nav>
         <PerfilUsuario />
       </div>
     </aside>
+  );
+}
+function EstadoNavegacion() {
+  const { pending } = useLinkStatus();
+  return (
+    <span className="ml-auto inline-block w-4" aria-hidden="true">
+      {pending ? "…" : ""}
+    </span>
   );
 }

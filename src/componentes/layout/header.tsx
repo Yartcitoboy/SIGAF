@@ -5,7 +5,7 @@ import { Bell, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useRol } from "@/context/rol-context";
 import { useConsulta } from "@/lib/hooks/use-consulta";
-import { obtenerNotificaciones, marcarLeida } from "@/lib/servicios/alertas";
+import { obtenerCampana, marcarLeida } from "@/lib/servicios/alertas";
 import { BotonTema } from "./boton-tema";
 export function Header({
   titulo,
@@ -15,7 +15,9 @@ export function Header({
   subtitulo?: string;
 }) {
   const { perfilActual } = useRol();
-  const { datos, error, recargar } = useConsulta(obtenerNotificaciones);
+  const { datos, error, recargar } = useConsulta(obtenerCampana, {
+    intervaloMs: 60000,
+  });
   useEffect(() => {
     const refrescar = () => {
       void recargar();
@@ -23,10 +25,8 @@ export function Header({
     window.addEventListener("sigaf:alertas", refrescar);
     return () => window.removeEventListener("sigaf:alertas", refrescar);
   }, [recargar]);
-  const sinLeer =
-    datos?.filter(
-      (n) => n.id_usuario === perfilActual.id_usuario && n.estado !== "LEIDO",
-    ) ?? [];
+  const sinLeer = datos?.filas ?? [];
+  const cantidad = datos?.total ?? 0;
   return (
     <header
       id="contenido-principal"
@@ -58,9 +58,9 @@ export function Header({
             className="relative grid min-h-11 min-w-11 cursor-pointer list-none place-items-center rounded-xl border border-borde bg-superficie hover:bg-elevado"
           >
             <Bell size={18} />
-            {sinLeer.length > 0 && (
+            {cantidad > 0 && (
               <span className="absolute -right-1 -top-1 rounded-full bg-accion px-1.5 text-[10px] text-sobre-accion">
-                {sinLeer.length}
+                {cantidad}
               </span>
             )}
           </summary>
@@ -75,7 +75,7 @@ export function Header({
               </p>
             ) : datos === null ? (
               <p className="text-sm text-muted">Cargando…</p>
-            ) : !sinLeer.length ? (
+            ) : !cantidad ? (
               <p className="text-sm text-muted">
                 No tienes notificaciones sin leer.
               </p>
