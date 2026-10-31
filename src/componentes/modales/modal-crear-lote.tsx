@@ -140,143 +140,148 @@ function FormularioLote({
               setFecha(r.lectura.vencimiento ?? "");
             }}
           />
-          <label className="block text-sm">
-            Medicamento
-            <select
-              required
-              value={producto}
-              aria-label="Medicamento"
-              onChange={(e) => {
-                setProducto(e.target.value);
-                setLote("");
-                setFecha("");
-                setFichaLeida(null);
-                setFabricacion("");
-                setError(null);
-              }}
-              className="campo mt-1"
-            >
-              <option value="">Selecciona un producto</option>
-              {fichaLeida &&
-                !productos.some(
-                  (p) => p.id_producto === fichaLeida.id_producto,
-                ) && (
-                  <option value={fichaLeida.id_producto}>
-                    {fichaLeida.nombre}
+          <fieldset disabled={buscando} className="min-w-0 space-y-4">
+            <label className="block text-sm">
+              Medicamento
+              <select
+                required
+                value={producto}
+                aria-label="Medicamento"
+                onChange={(e) => {
+                  setProducto(e.target.value);
+                  setLote("");
+                  setFecha("");
+                  setFichaLeida(null);
+                  setFabricacion("");
+                  setError(null);
+                }}
+                className="campo mt-1"
+              >
+                <option value="">Selecciona un producto</option>
+                {fichaLeida &&
+                  !productos.some(
+                    (p) => p.id_producto === fichaLeida.id_producto,
+                  ) && (
+                    <option value={fichaLeida.id_producto}>
+                      {fichaLeida.nombre}
+                    </option>
+                  )}
+                {productos.map((p) => (
+                  <option key={p.id_producto} value={p.id_producto}>
+                    {p.nombre}
+                    {p.registro_isp ? ` · ISP ${p.registro_isp}` : ""}
                   </option>
-                )}
-              {productos.map((p) => (
-                <option key={p.id_producto} value={p.id_producto}>
-                  {p.nombre}
-                  {p.registro_isp ? ` · ISP ${p.registro_isp}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            Lote del fabricante
-            <input
-              required
-              maxLength={50}
-              value={lote}
-              onChange={(e) => setLote(e.target.value)}
-              className="campo mt-1"
-            />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              Vencimiento
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm">
+              Lote del fabricante
               <input
-                type="date"
                 required
-                value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
+                maxLength={50}
+                value={lote}
+                onChange={(e) => setLote(e.target.value)}
                 className="campo mt-1"
               />
             </label>
-            <label className="text-sm">
-              Fecha de ingreso
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm">
+                Vencimiento
+                <input
+                  type="date"
+                  required
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                  className="campo mt-1"
+                />
+              </label>
+              <label className="text-sm">
+                Fecha de ingreso
+                <input
+                  name="ingreso"
+                  type="date"
+                  max={hoy}
+                  required
+                  defaultValue={hoy}
+                  className="campo mt-1"
+                />
+              </label>
+              <label className="text-sm">
+                Fabricación (opcional)
+                <input
+                  name="fabricacion"
+                  type="date"
+                  max={hoy}
+                  value={fabricacion}
+                  onChange={(e) => setFabricacion(e.target.value)}
+                  className="campo mt-1"
+                />
+              </label>
+              <SelectorCantidad key={revision} />
+            </div>
+            <label className="block text-sm">
+              Costo unitario (CLP)
               <input
-                name="ingreso"
-                type="date"
-                max={hoy}
+                name="costo"
+                type="text"
+                inputMode="decimal"
+                value={costo}
+                onChange={(e) => setCosto(formatearMontoCLP(e.target.value))}
+                maxLength={18}
+                placeholder="Ej.: 1.000 o 1.000.000"
                 required
-                defaultValue={hoy}
                 className="campo mt-1"
               />
             </label>
-            <label className="text-sm">
-              Fabricación (opcional)
-              <input
-                name="fabricacion"
-                type="date"
-                max={hoy}
-                value={fabricacion}
-                onChange={(e) => setFabricacion(e.target.value)}
+            <label className="block text-sm">
+              Bodega / ubicación física
+              <select
+                name="bodega"
+                aria-label="Bodega / ubicación física"
+                required
+                defaultValue=""
                 className="campo mt-1"
-              />
+              >
+                <option value="">Selecciona una ubicación oficial</option>
+                {bodegas.map((b) => (
+                  <option key={b.id_bodega} value={b.id_bodega}>
+                    {b.nombre} · {b.ubicacion}
+                  </option>
+                ))}
+              </select>
             </label>
-            <SelectorCantidad key={revision} />
-          </div>
-          <label className="block text-sm">
-            Costo unitario (CLP)
-            <input
-              name="costo"
-              type="text"
-              inputMode="decimal"
-              value={costo}
-              onChange={(e) => setCosto(formatearMontoCLP(e.target.value))}
-              maxLength={18}
-              placeholder="Ej.: 1.000 o 1.000.000"
-              required
-              className="campo mt-1"
-            />
-          </label>
-          <label className="block text-sm">
-            Bodega / ubicación física
-            <select
-              name="bodega"
-              aria-label="Bodega / ubicación física"
-              required
-              defaultValue=""
-              className="campo mt-1"
+            {fecha && (
+              <SemaforoBadge
+                estado={calcularSemaforoLote(fecha, configuracion, hoy).estado}
+                diasRestantes={
+                  calcularSemaforoLote(fecha, configuracion, hoy).diasRestantes
+                }
+              />
+            )}
+            {ficha && (
+              <p className="rounded-xl bg-sutil p-3 text-sm">
+                <strong>{ficha.nombre}</strong>
+                <br />
+                Presentación: {ficha.unidad_medida || "Sin especificar"}.
+                Confirma que la cantidad corresponda a esta presentación; no se
+                realizan conversiones.
+              </p>
+            )}
+            {error && (
+              <p
+                role="alert"
+                className="text-sm text-red-700 dark:text-red-300"
+              >
+                {error}
+              </p>
+            )}
+            <button
+              disabled={ocupado || buscando || !ficha}
+              className="boton-primario"
             >
-              <option value="">Selecciona una ubicación oficial</option>
-              {bodegas.map((b) => (
-                <option key={b.id_bodega} value={b.id_bodega}>
-                  {b.nombre} · {b.ubicacion}
-                </option>
-              ))}
-            </select>
-          </label>
-          {fecha && (
-            <SemaforoBadge
-              estado={calcularSemaforoLote(fecha, configuracion, hoy).estado}
-              diasRestantes={
-                calcularSemaforoLote(fecha, configuracion, hoy).diasRestantes
-              }
-            />
-          )}
-          {ficha && (
-            <p className="rounded-xl bg-sutil p-3 text-sm">
-              <strong>{ficha.nombre}</strong>
-              <br />
-              Presentación: {ficha.unidad_medida || "Sin especificar"}. Confirma
-              que la cantidad corresponda a esta presentación; no se realizan
-              conversiones.
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-red-700 dark:text-red-300">
-              {error}
-            </p>
-          )}
-          <button
-            disabled={ocupado || buscando || !ficha}
-            className="boton-primario"
-          >
-            {ocupado ? "Registrando…" : "Confirmar recepción"}
-          </button>
+              {ocupado ? "Registrando…" : "Confirmar recepción"}
+            </button>
+          </fieldset>
         </fieldset>
       </form>
     </Dialogo>

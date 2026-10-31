@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Producto } from "@/tipos/database";
-export interface ResultadoCodigo {
-  producto: Producto;
-  lectura: { codigo: string; lote?: string; vencimiento?: string };
-  advertencia?: string;
-}
+import { ControlLecturas } from "@/lib/servicios/control-lecturas";
+import {
+  consultarCodigoMedicamento,
+  type ResultadoCodigo,
+  type LecturaCodigo,
+} from "@/lib/servicios/lector-usb";
 export function EscanerCodigo({
   alEncontrar,
   alIniciar,
@@ -16,7 +16,7 @@ export function EscanerCodigo({
   alEncontrar: (r: ResultadoCodigo) => void;
   alIniciar?: () => void;
   alActividad?: (activo: boolean) => void;
-  alNoEncontrado?: (codigo: string) => void;
+  alNoEncontrado?: (codigo: string, lectura?: LecturaCodigo) => void;
   deshabilitado?: boolean;
 }) {
   const [valor, setValor] = useState(""),
@@ -24,24 +24,26 @@ export function EscanerCodigo({
     [mensaje, setMensaje] = useState(""),
     [tipo, setTipo] = useState<"estado" | "error">("estado"),
     [ausente, setAusente] = useState<string | null>(null);
+  const [lecturaAusente, setLecturaAusente] = useState<
+    LecturaCodigo | undefined
+  >();
   const campo = useRef<HTMLInputElement>(null),
     control = useRef<AbortController | null>(null),
-    secuencia = useRef(0),
-    ultimo = useRef({ codigo: "", instante: 0 });
+    lecturas = useRef(new ControlLecturas());
   useEffect(
     () => () => {
-      secuencia.current++;
+      lecturas.current.cancelar();
       control.current?.abort();
     },
     [],
   );
   function limpiar() {
-    secuencia.current++;
+    lecturas.current.cancelar();
     control.current?.abort();
-    ultimo.current = { codigo: "", instante: 0 };
     setValor("");
     setMensaje("");
     setAusente(null);
+    setLecturaAusente(undefined);
     setBuscando(false);
     alActividad?.(false);
     alIniciar?.();
@@ -50,13 +52,8 @@ export function EscanerCodigo({
   async function buscar() {
     if (deshabilitado) return;
     const codigo = valor.replace(/[\r\n]+$/g, "").trim();
-    if (
-      ultimo.current.codigo === codigo &&
-      Date.now() - ultimo.current.instante < 700
-    )
-      return;
-    ultimo.current = { codigo, instante: Date.now() };
-    const actual = ++secuencia.current;
+    const actual = lecturas.current.iniciar(codigo);
+    if (actual === null) return;
     control.current?.abort();
     control.current = new AbortController();
     setAusente(null);
@@ -64,6 +61,7 @@ export function EscanerCodigo({
     setTipo("estado");
     setMensaje("");
     if (!codigo) {
+      lecturas.current.terminar(actual);
       setTipo("error");
       setMensaje("Escanea o escribe un código.");
       setBuscando(false);
@@ -71,29 +69,35 @@ export function EscanerCodigo({
       return;
     }
     setBuscando(true);
+    campo.current?.select();
     alActividad?.(true);
     try {
-      const r = await fetch(
-        "/api/medicamentos/codigo?codigo=" + encodeURIComponent(codigo),
-        {
-          cache: "no-store",
-          credentials: "same-origin",
-          signal: control.current.signal,
-        },
+      const r = await consultarCodigoMedicamento(
+        codigo,
+        control.current.signal,
       );
-      const datos = await r.json();
-      if (actual !== secuencia.current) return;
+      const { datos } = r;
+      if (!lecturas.current.vigente(actual)) return;
       if (!r.ok) {
-        if (r.status === 404) setAusente(datos.lectura?.codigo ?? null);
+        if (r.estado === 404) {
+          setAusente(datos.lectura?.codigo ?? null);
+          setLecturaAusente(datos.lectura);
+        }
         throw new Error(datos.error || "No se pudo buscar el medicamento.");
       }
+      if (!datos.producto || !datos.lectura)
+        throw new Error("La respuesta del catálogo está incompleta.");
       setMensaje(
         `Encontrado: ${datos.producto.nombre}. ${datos.advertencia ?? "Revisa los datos antes de confirmar."}`,
       );
-      alEncontrar(datos);
+      alEncontrar({
+        producto: datos.producto,
+        lectura: datos.lectura,
+        advertencia: datos.advertencia,
+      });
     } catch (e) {
       if (
-        actual === secuencia.current &&
+        lecturas.current.vigente(actual) &&
         !(e instanceof Error && e.name === "AbortError")
       ) {
         setTipo("error");
@@ -102,7 +106,8 @@ export function EscanerCodigo({
         );
       }
     } finally {
-      if (actual === secuencia.current) {
+      if (lecturas.current.vigente(actual)) {
+        lecturas.current.terminar(actual);
         setBuscando(false);
         alActividad?.(false);
       }
@@ -125,6 +130,11 @@ export function EscanerCodigo({
           className="campo mt-2"
           placeholder="Activa el lector y escanea; finaliza con Enter"
           onChange={(e) => {
+            if (e.target.value === valor) return;
+            lecturas.current.cancelar();
+            control.current?.abort();
+            setBuscando(false);
+            alActividad?.(false);
             setValor(e.target.value);
             setMensaje("");
             setAusente(null);
@@ -144,7 +154,10 @@ export function EscanerCodigo({
           type="button"
           disabled={deshabilitado}
           className="boton-secundario"
-          onClick={() => campo.current?.focus()}
+          onClick={() => {
+            campo.current?.focus();
+            campo.current?.select();
+          }}
         >
           Activar escaneo
         </button>
@@ -183,7 +196,7 @@ export function EscanerCodigo({
         <button
           type="button"
           className="boton-secundario"
-          onClick={() => alNoEncontrado(ausente)}
+          onClick={() => alNoEncontrado(ausente, lecturaAusente)}
         >
           Registrar medicamento manualmente
         </button>

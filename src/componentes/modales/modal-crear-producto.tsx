@@ -7,6 +7,8 @@ import { fichaISP, validarFormatoRegistroISP } from "@/lib/servicios/isp";
 import { gtinValido } from "@/lib/vistas/presentacion";
 import { useRol } from "@/context/rol-context";
 import type { Categoria, Producto } from "@/tipos/database";
+import type { LecturaCodigo } from "@/lib/servicios/lector-usb";
+import { fechaVisible } from "@/lib/vistas/presentacion";
 interface Props {
   abierto: boolean;
   alCerrar: () => void;
@@ -14,6 +16,7 @@ interface Props {
   categorias: Categoria[];
   producto?: Producto;
   codigoInicial?: string;
+  lecturaInicial?: LecturaCodigo;
 }
 export function ModalCrearProducto(props: Props) {
   return props.abierto ? (
@@ -26,6 +29,7 @@ function Formulario({
   categorias,
   producto,
   codigoInicial,
+  lecturaInicial,
 }: Props) {
   const { perfilActual } = useRol();
   const opciones = perfilActual.sistema.opciones;
@@ -117,6 +121,61 @@ function Formulario({
     >
       <form onSubmit={guardar} aria-busy={ocupado}>
         <fieldset disabled={ocupado} className="min-w-0 space-y-4">
+          {lecturaInicial && (
+            <section
+              className="rounded-xl bg-acento-suave p-3 space-y-2 text-sm"
+              aria-label="Datos recuperados del escaneo"
+            >
+              <p role="status" className="font-semibold">
+                {producto
+                  ? "Ficha encontrada: formulario completado desde SIGAF."
+                  : "Código leído: completa los datos del medicamento antes de guardar."}
+              </p>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="inline font-medium">Código leído: </dt>
+                  <dd className="inline break-all">{lecturaInicial.codigo}</dd>
+                </div>
+                {lecturaInicial.lote && (
+                  <div>
+                    <dt className="inline font-medium">Lote del envase: </dt>
+                    <dd className="inline">{lecturaInicial.lote}</dd>
+                  </div>
+                )}
+                {lecturaInicial.vencimiento && (
+                  <div>
+                    <dt className="inline font-medium">
+                      Vencimiento del envase:{" "}
+                    </dt>
+                    <dd className="inline">
+                      {fechaVisible(lecturaInicial.vencimiento)}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              <p className="text-xs text-muted">
+                El lote y el vencimiento corresponden a esa unidad o partida. Se
+                registran al recibir el lote; guardar esta ficha no registra
+                existencias.
+              </p>
+            </section>
+          )}
+          {producto?.titular_isp && (
+            <p className="rounded-xl bg-sutil p-3 text-sm">
+              Titular del registro ISP: <strong>{producto.titular_isp}</strong>.
+              Dato conservado de la ficha; no identifica necesariamente al
+              laboratorio fabricante.
+            </p>
+          )}
+          {producto?.codigo_barras &&
+            /^\d+$/.test(producto.codigo_barras) &&
+            !gtinValido(producto.codigo_barras) && (
+              <p role="alert" className="rounded-xl bg-sutil p-3 text-sm">
+                Esta ficha conserva un código histórico con dígito de control
+                inválido. Comprueba el envase antes de corregirlo; no se asigna
+                un código ficticio.
+              </p>
+            )}
           <label className="block text-sm">
             Nombre comercial
             <input

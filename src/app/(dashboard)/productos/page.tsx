@@ -1,4 +1,5 @@
 "use client";
+import type { LecturaCodigo } from "@/lib/servicios/lector-usb";
 import { EscanerCodigo } from "@/componentes/productos/escaner-codigo";
 import dynamic from "next/dynamic";
 import { useState, useCallback } from "react";
@@ -27,6 +28,9 @@ export default function ProductosPage() {
   const { rolActual, perfilActual } = useRol();
   const [texto, setTexto] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [lecturaInicial, setLecturaInicial] = useState<
+    LecturaCodigo | undefined
+  >();
   const [codigoInicial, setCodigoInicial] = useState("");
   const [abierto, setAbierto] = useState(false);
   const [producto, setProducto] = useState<Producto | undefined>();
@@ -59,8 +63,10 @@ export default function ProductosPage() {
         subtitulo="Productos y categorías consultados directamente desde Supabase."
       />
       <EscanerCodigo
+        alIniciar={() => setLecturaInicial(undefined)}
         alEncontrar={(r) => {
           setCodigoInicial("");
+          setLecturaInicial(r.lectura);
           if (rolActual === "ADMIN") {
             setProducto(r.producto);
             setAbierto(true);
@@ -68,9 +74,10 @@ export default function ProductosPage() {
         }}
         alNoEncontrado={
           rolActual === "ADMIN"
-            ? (codigo) => {
+            ? (codigo, lectura) => {
                 setProducto(undefined);
                 setCodigoInicial(codigo);
+                setLecturaInicial(lectura);
                 setAbierto(true);
               }
             : undefined
@@ -104,6 +111,7 @@ export default function ProductosPage() {
             onClick={() => {
               setProducto(undefined);
               setCodigoInicial("");
+              setLecturaInicial(undefined);
               setAbierto(true);
             }}
           >
@@ -177,6 +185,7 @@ export default function ProductosPage() {
                         <button
                           className="boton-secundario"
                           onClick={() => {
+                            setLecturaInicial(undefined);
                             setProducto(p);
                             setAbierto(true);
                           }}
@@ -203,6 +212,7 @@ export default function ProductosPage() {
         <ModalCrearProducto
           abierto={abierto}
           codigoInicial={codigoInicial}
+          lecturaInicial={lecturaInicial}
           producto={producto}
           alCerrar={() => setAbierto(false)}
           alGuardarExitoso={consulta.recargar}
