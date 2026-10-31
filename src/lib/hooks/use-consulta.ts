@@ -1,6 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-export function useConsulta<T>(consulta: () => Promise<T>) {
+export function useConsulta<T>(
+  consulta: () => Promise<T>,
+  { conservarDatosEnError = false }: { conservarDatosEnError?: boolean } = {},
+) {
   const [estado, setEstado] = useState<{
     datos: T | null;
     cargando: boolean;
@@ -30,18 +33,18 @@ export function useConsulta<T>(consulta: () => Promise<T>) {
         },
         (e) => {
           if (actual === secuencia.current)
-            setEstado({
-              datos: null,
-              actualizado: null,
+            setEstado((anterior) => ({
+              datos: conservarDatosEnError ? anterior.datos : null,
+              actualizado: conservarDatosEnError ? anterior.actualizado : null,
               cargando: false,
               error:
                 e instanceof Error
                   ? e.message
                   : "No se pudieron cargar los datos.",
-            });
+            }));
         },
       );
-  }, [consulta]);
+  }, [consulta, conservarDatosEnError]);
   const cancelar = useCallback(() => {
     secuencia.current++;
   }, []);

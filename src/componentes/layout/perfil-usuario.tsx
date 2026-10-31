@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { useRol } from "@/context/rol-context";
 import { createClient } from "@/lib/supabase/client";
 import { Dialogo } from "@/componentes/ui/dialogo";
+import { GestionEntregaAlertas } from "@/componentes/alertas/gestion-entrega";
 export function PerfilUsuario() {
   const { perfilActual: p } = useRol(),
     router = useRouter();
   const [ocupado, setOcupado] = useState(false);
   const [clave, setClave] = useState(false);
+  const [correo, setCorreo] = useState(false);
   const perfilActual = p;
   async function cambiarClave(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -90,6 +92,13 @@ export function PerfilUsuario() {
               <KeyRound size={15} />
               Cambiar contraseña
             </button>
+            <button
+              type="button"
+              onClick={() => setCorreo(true)}
+              className="boton-secundario mt-2 w-full"
+            >
+              Correo de alertas
+            </button>
           </div>
         </details>
         <button
@@ -146,6 +155,11 @@ export function PerfilUsuario() {
               {ocupado ? "Guardando…" : "Guardar contraseña"}
             </button>
           </form>
+        </Dialogo>
+      )}
+      {correo && (
+        <Dialogo titulo="Correo de alertas" cerrar={() => setCorreo(false)}>
+          <GestionEntregaAlertas soloPersonal />
         </Dialogo>
       )}
     </>

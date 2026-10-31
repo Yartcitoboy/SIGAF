@@ -134,6 +134,7 @@ export interface Merma {
 }
 
 export interface Notificacion {
+  generado_en?: string | null;
   id_notificacion: number;
   id_usuario: string; // UUID
   tipo: TipoNotificacion | string | null;

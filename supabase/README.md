@@ -20,3 +20,5 @@ Estado real al 27-10-2026: migraciones 002–006 y las tres migraciones posterio
 La correspondencia entre los archivos locales y las versiones remotas está en `aplicacion-remota-2026-10-27.json`. No ejecutar 001 sobre esta base ni repetir migraciones. No usar `db push` sin conciliar primero el historial: los archivos heredados y las aplicaciones por MCP utilizan identificadores distintos.
 
 Ver [Puesta en marcha](../docs/puesta-en-marcha.md) y [Cambios actuales](../docs/cambios-base-real-e-interfaz-2026-10-27.md).
+
+Actualización 30-10-2026: `sigaf-alertas` versión 1 y `sigaf-usuarios` versión 2 desplegadas. Las tres migraciones de alertas del 30-10 están aplicadas: programación diaria en la nube, confirmación de buzones, cola exclusiva y secretos OAuth en Vault. El envío Gmail necesita la vinculación real de Google; no se enviaron correos durante las pruebas. Ver [activación y funcionamiento](../docs/alertas-gmail-2026-10-30.md) y `aplicacion-remota-2026-10-30.json`.

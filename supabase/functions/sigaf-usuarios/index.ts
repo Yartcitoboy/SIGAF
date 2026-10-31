@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 import { z } from "npm:zod@4.6.5";
+import { errorCorreoReal } from "../_shared/correo.ts";
 
 const columnas = "id_usuario,nombre,email,id_perfil,id_sucursal,activo";
 const ficha = z.object({
@@ -214,6 +215,8 @@ export async function atender(request: Request) {
       activo: dato.activo,
     };
     if (esAlta && "password" in dato) {
+      const errorCorreo = errorCorreoReal(dato.email);
+      if (errorCorreo) throw new ErrorHttp(errorCorreo, 400);
       const { data: auth, error } = await db.auth.admin.createUser({
         email: dato.email,
         password: dato.password,
@@ -268,6 +271,8 @@ export async function atender(request: Request) {
         400,
       );
     if (dato.email !== previo.email) {
+      const errorCorreo = errorCorreoReal(dato.email);
+      if (errorCorreo) throw new ErrorHttp(errorCorreo, 400);
       const { error } = await db.auth.admin.updateUserById(dato.id_usuario, {
         email: dato.email,
         email_confirm: true,

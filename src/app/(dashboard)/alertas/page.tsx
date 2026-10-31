@@ -10,6 +10,8 @@ import { useRol } from "@/context/rol-context";
 import Link from "next/link";
 import { ResumenConsulta } from "@/componentes/ui/contexto-operacion";
 import { coincide, fechaHoraVisible } from "@/lib/vistas/presentacion";
+import { GestionEntregaAlertas } from "@/componentes/alertas/gestion-entrega";
+import { estadoCorreoVisible } from "@/lib/servicios/entrega-alertas";
 export default function AlertasPage() {
   const consulta = useConsulta(obtenerNotificaciones);
   const { rolActual } = useRol();
@@ -30,7 +32,11 @@ export default function AlertasPage() {
           (!tipo || n.tipo === tipo) &&
           coincide(texto, n.mensaje, n.destinatario_email, n.id_usuario),
       )
-      .sort((a, b) => b.fecha_envio.localeCompare(a.fecha_envio)) ?? [];
+      .sort((a, b) =>
+        (b.generado_en || b.fecha_envio).localeCompare(
+          a.generado_en || a.fecha_envio,
+        ),
+      ) ?? [];
   async function atender(id: number) {
     setOcupado(id);
     try {
@@ -51,6 +57,7 @@ export default function AlertasPage() {
         titulo="Centro de alertas"
         subtitulo="Historial de notificaciones. Leer un aviso no equivale a resolver su causa."
       />
+      <GestionEntregaAlertas />
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -117,12 +124,12 @@ export default function AlertasPage() {
                 </span>
                 <p className="mt-2 text-sm font-medium">{n.mensaje}</p>
                 <p className="mt-2 text-xs text-muted">
-                  Emitida {fechaHoraVisible(n.fecha_envio)}
+                  Emitida {fechaHoraVisible(n.generado_en || n.fecha_envio)}
                   {rolActual === "ADMIN" &&
                     " · Destinatario: " +
                       (n.destinatario_email || n.id_usuario) +
                       " · Correo: " +
-                      (n.estado_correo || "Sin registro")}
+                      estadoCorreoVisible(n.estado_correo || "Sin registro")}
                 </p>
                 {rolActual === "ADMIN" && n.error_correo && (
                   <p className="mt-1 text-xs text-red-700 dark:text-red-300">

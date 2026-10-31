@@ -1,0 +1,74 @@
+{
+  "fecha_chile": "2026-10-30",
+  "proyecto": "nkqxhpiagkcfvxbytarn",
+  "proveedor_elegido": "Gmail API (Google OAuth)",
+  "migraciones": [
+    {
+      "archivo": "migrations/20261030052521_alertas_diarias_y_destinatarios.sql",
+      "version_remota": "20261030054331",
+      "nombre_remoto": "alertas_diarias_y_destinatarios",
+      "sha256": "e6c8c9fb92f14eb78a9e840a1f7f39331ce870f5af0d7cb02a905917bed39e29"
+    },
+    {
+      "archivo": "migrations/20261030052832_cron_alertas_y_correo_vault.sql",
+      "version_remota": "20261030054402",
+      "nombre_remoto": "cron_alertas_y_correo_vault",
+      "sha256": "9e293e1b0e2c867676d82708faf7eb3d65bdfd47b7d8f4d25bf09602863c7898"
+    },
+    {
+      "archivo": "migrations/20261030055340_coherencia_estado_correos_historicos.sql",
+      "version_remota": "20261030055534",
+      "nombre_remoto": "coherencia_estado_correos_historicos",
+      "sha256": "7c4062d07c0845d8b0975d6617eee740f634a37146de9dd8ac9b44de3fb39c44"
+    },
+    {
+      "archivo": "migrations/20261030063632_corregir_guardado_configuracion_gmail.sql",
+      "version_remota": "20261030064345",
+      "nombre_remoto": "corregir_guardado_configuracion_gmail",
+      "sha256": "3ac33c62acff1c80894ffb2bf8c9c437de9b4a0803675f3b5109df166fdf790b"
+    }
+  ],
+  "funciones": [
+    {
+      "nombre": "sigaf-alertas",
+      "version": 1,
+      "estado": "ACTIVE",
+      "sha256_codigo": "010986af892eb906769a8196af848ba5287e5e638fa7b519b0452e11c3149620"
+    },
+    {
+      "nombre": "sigaf-usuarios",
+      "version": 2,
+      "estado": "ACTIVE",
+      "sha256_codigo": "e34435b18c14648a7c868829786c94035487d2c10a770ac5e6dc805066c52fba"
+    }
+  ],
+  "programacion": {
+    "nombre": "sigaf-caducidad-diaria",
+    "activa": true,
+    "comprobacion": "Cada minuto; un corte por fecha PostgreSQL en America/Santiago",
+    "primer_corte": "2026-10-31 00:00 America/Santiago"
+  },
+  "entrega": {
+    "cliente_google_configurado": true,
+    "gmail_remitente_autorizado": false,
+    "destinatarios_confirmados": 0,
+    "correos_enviados_en_pruebas": 0,
+    "pendiente": "Autorizar Gmail remitente en Google y confirmar buzones en Alertas"
+  },
+  "verificaciones": {
+    "pruebas_aprobadas": 67,
+    "solicitudes_sin_sesion": 401,
+    "token_invalido": 401,
+    "cron_invalido": 401,
+    "callback_incompleto": 400,
+    "metodo_incorrecto": 405,
+    "stock_conservado": 2275,
+    "lotes_conservados": 19,
+    "movimientos_conservados": 10,
+    "avisos_internos_generados": 35,
+    "cuentas_o_contrasenas_modificadas_por_pruebas": 0,
+    "guardado_oauth_real_comprobado": true,
+    "boton_conectar_habilitado": true
+  },
+  "bloqueo_navegador": "Antecedente: apertura asistida de Google Cloud redirigió a login.microsoftonline.com y fue rechazada. El usuario completó manualmente el cliente OAuth y sus datos ya se guardaron en SIGAF; falta el consentimiento de Gmail."
+}

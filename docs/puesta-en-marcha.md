@@ -1,6 +1,6 @@
 # Puesta en marcha con Supabase real
 
-Actualizado el 27 de octubre de 2026. Sustituye las instrucciones anteriores de acceso temporal.
+Actualizado el 30 de octubre de 2026. Sustituye las instrucciones anteriores de acceso temporal. La integración de correo vigente está en [Alertas y Gmail](alertas-gmail-2026-10-30.md).
 
 ## Acceso y configuración obligatorios
 
@@ -47,7 +47,8 @@ Se verificaron 19 lotes, 19 existencias y 2.275 unidades, iguales que antes de i
 | Dispensación | FEFO sobre datos autorizados; confirmación con operar_stock. |
 | Alertas y campana | Notificaciones del usuario real; marcado de lectura con alcance de destinatario. |
 | Reportes | Datos de Supabase; emisión con autor de la sesión y fecha por defecto de PostgreSQL. |
-| Usuarios | API web y función protegida sigaf-usuarios, versión 1 activa en Supabase; comprueba Auth y ADMIN activo. |
+| Usuarios | API web y función protegida sigaf-usuarios, versión 2 activa en Supabase; comprueba Auth, ADMIN activo y formato de correos reales. |
+| Correo de caducidad | Gmail API mediante OAuth; función sigaf-alertas y programación en Supabase. Requiere vincular remitente y confirmar buzones. |
 | Configuración | Configuración, farmacia, sucursal y bodega. |
 | Apariencia | Preferencia del usuario en preferencia_usuario. |
 | Mensajes | Solo interfaz solicitada; envío deshabilitado y sin conversaciones ficticias. |
@@ -56,13 +57,11 @@ El servidor exige sesión real y mantiene filtros de rol/sucursal y proyección 
 
 ## Variables del servidor
 
-Conservar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Para las funciones correspondientes también se requieren:
+Conservar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Usuarios y Alertas usan las claves administradas de sus funciones en Supabase; estos módulos no necesitan una clave administrativa en el servidor local.
 
-- `SUPABASE_SERVICE_ROLE_KEY`: exclusivamente en servidor para el proceso de cron/correos. Usuarios utiliza las claves administradas en su función de Supabase y no necesita esta variable local. Nunca utilizar NEXT_PUBLIC ni publicarla en Git.
-- `CRON_SECRET`: protección del proceso programado de alertas.
-- `RESEND_API_KEY` y `RESEND_FROM`: entrega de correos.
+El usuario eligió Gmail API. El cliente OAuth ya está guardado; falta autorizar el Gmail remitente desde Alertas. Se corrigió el guardado respetando safeupdate y el botón de conexión ya se habilita al guardar. Los secretos y la autorización renovable se guardan en Vault; no deben añadirse a variables NEXT_PUBLIC, Git o el chat. El cron ya está instalado y activo con corte a las 00:00 de Chile desde el 31-10-2026. El envío permanece pendiente de la vinculación Google y confirmación de destinatarios. No se enviaron correos de prueba. El cron local de Resend se retiró y devuelve 410. Ver [pasos de activación](alertas-gmail-2026-10-30.md).
 
-No pegar secretos en el chat. Configurarlos mediante el mecanismo seguro del entorno. Cron y Resend no están configurados ni programados automáticamente. Ya se generaron 14 alertas internas para las cuentas reales, sin enviar correos. Mensajes sigue siendo solo interfaz básica con envío deshabilitado.
+Mensajes sigue siendo solo interfaz básica con envío deshabilitado.
 
 ## Validación y trabajo compartido
 

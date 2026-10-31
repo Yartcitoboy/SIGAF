@@ -1,6 +1,8 @@
 # SIGAF
 
 La aplicación trabaja exclusivamente con Supabase y cuentas reales. Se retiraron el acceso temporal y los datos demo. El proyecto compartido ya tiene las migraciones operativas, 214 productos (198 importados del ISP) y Usuarios conectado mediante una función protegida. Consulta [Puesta en marcha](docs/puesta-en-marcha.md) y [Cambios actuales](docs/cambios-base-real-e-interfaz-2026-10-27.md) para conocer la interfaz, roles y configuración externa pendiente.
+
+El sistema de caducidad incorpora programación diaria en Supabase, confirmación de destinatarios y envío mediante una cuenta Gmail existente. Para vincular Google y activar la entrega real, ver [Alertas y Gmail](docs/alertas-gmail-2026-10-30.md).
 ### Sistema Inteligente de Gestión y Alerta Farmacéutica
 **Proyecto de Título / Capstone · Duoc UC**
 

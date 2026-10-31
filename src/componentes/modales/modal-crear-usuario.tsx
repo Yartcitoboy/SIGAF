@@ -8,6 +8,7 @@ import {
   restablecerPassword,
 } from "@/lib/servicios/usuarios";
 import type { Perfil, Sucursal, Usuario } from "@/tipos/database";
+import { errorCorreoReal } from "@/lib/vistas/correo";
 interface Props {
   abierto: boolean;
   alCerrar: () => void;
@@ -38,6 +39,18 @@ function Formulario({
     e.preventDefault();
     setError(null);
     const f = new FormData(e.currentTarget);
+    if (
+      !reset &&
+      (!usuario ||
+        String(f.get("email")).trim().toLowerCase() !==
+          usuario.email.toLowerCase())
+    ) {
+      const invalido = errorCorreoReal(String(f.get("email")));
+      if (invalido) {
+        setError(invalido);
+        return;
+      }
+    }
     if (
       !reset &&
       (!String(f.get("nombre") || "").trim() ||
@@ -116,6 +129,11 @@ function Formulario({
                   className="campo mt-1"
                 />
               </label>
+              <p className="text-xs text-muted">
+                Usa un Gmail existente o un correo institucional real. Crear la
+                cuenta en SIGAF no crea un buzón de Google. La persona debe
+                confirmar su correo en Alertas para recibir el resumen diario.
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-sm">
                   Rol
