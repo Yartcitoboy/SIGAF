@@ -1,5 +1,7 @@
 # Alertas de caducidad y correo Gmail de SIGAF
 
+Actualización del 8 de noviembre: la gestión de correos es exclusiva de Admin, incluida la confirmación del código que comunica el empleado. El flujo y las cuentas actuales están en [Usuarios y correos](usuarios-y-correos-2026-11-08.md); la confirmación personal descrita abajo es histórica.
+
 30 de octubre de 2026. Rama `front-isa`; sin commit ni push.
 
 ## Qué está implementado

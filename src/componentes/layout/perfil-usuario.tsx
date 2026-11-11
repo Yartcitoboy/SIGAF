@@ -92,13 +92,13 @@ export function PerfilUsuario() {
               <KeyRound size={15} />
               Cambiar contraseña
             </button>
-            <button
+            {p.rol === "ADMIN" && <button
               type="button"
               onClick={() => setCorreo(true)}
               className="boton-secundario mt-2 w-full"
             >
               Correo de alertas
-            </button>
+            </button>}
           </div>
         </details>
         <button
@@ -157,9 +157,9 @@ export function PerfilUsuario() {
           </form>
         </Dialogo>
       )}
-      {correo && (
+      {correo && p.rol === "ADMIN" && (
         <Dialogo titulo="Correo de alertas" cerrar={() => setCorreo(false)}>
-          <GestionEntregaAlertas soloPersonal />
+          <GestionEntregaAlertas />
         </Dialogo>
       )}
     </>

@@ -34,7 +34,7 @@ export const comandoDatos = z.discriminatedUnion("accion", [
   z
     .object({
       accion: z.literal("operacion"),
-      alcance: z.enum(["completo", "configuracion"]).default("completo"),
+      alcance: z.enum(["completo", "configuracion", "dispensacion"]).default("completo"),
     })
     .strict(),
   z

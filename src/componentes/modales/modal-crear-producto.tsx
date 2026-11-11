@@ -121,6 +121,27 @@ function Formulario({
     >
       <form onSubmit={guardar} aria-busy={ocupado}>
         <fieldset disabled={ocupado} className="min-w-0 space-y-4">
+          <label className="block text-sm">
+            Código del envase / GTIN
+            <input
+              name="codigo"
+              maxLength={50}
+              defaultValue={producto?.codigo_barras ?? codigoInicial ?? ""}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+              }}
+              aria-describedby="ayuda-codigo-producto"
+              className="campo mt-1"
+            />
+          </label>
+          <p id="ayuda-codigo-producto" className="text-xs text-muted">
+            Haz clic en este campo y escanea el envase, o escribe el código.
+            Completa los datos de una ficha nueva manualmente y revisa antes de
+            guardar. Para localizar una ficha existente, usa el lector del catálogo.
+          </p>
           {lecturaInicial && (
             <section
               className="rounded-xl bg-acento-suave p-3 space-y-2 text-sm"
@@ -247,29 +268,19 @@ function Formulario({
             comprimidos ni mililitros.
           </p>
           <label className="block text-sm">
-            Código del envase / GTIN
-            <input
-              name="codigo"
-              maxLength={50}
-              defaultValue={producto?.codigo_barras ?? codigoInicial ?? ""}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }
-              }}
-              className="campo mt-1"
-            />
-          </label>
-          <label className="block text-sm">
             Registro sanitario ISP
             <input
               value={registro}
               onChange={(e) => setRegistro(e.target.value)}
               placeholder="F-12345/20"
+              aria-describedby="ayuda-isp-producto"
               className="campo mt-1"
             />
           </label>
+          <p id="ayuda-isp-producto" className="text-xs text-muted">
+            Ingresa el registro indicado en el envase. Puedes abrir la ficha del
+            ISP para comprobarlo; los datos no se completan desde un servicio externo.
+          </p>
           {validarFormatoRegistroISP(registro) && (
             <a
               href={fichaISP(registro)}

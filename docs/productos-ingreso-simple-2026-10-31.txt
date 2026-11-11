@@ -1,0 +1,11 @@
+PRODUCTOS: INGRESO SIMPLE
+
+Se mantiene el formulario y su modelo de datos. El campo Código del envase / GTIN se coloca primero: el usuario lo enfoca y escanea con su lector USB HID, o lo escribe manualmente. El Enter del lector no envía el formulario. En una ficha nueva se completan manualmente nombre, principio activo, categoría, presentación y registro ISP. Se conserva la vida útil opcional y las observaciones existentes.
+
+El registro ISP sigue siendo manual. Se conserva el enlace para abrir su ficha oficial y comprobarla. No se añade una API externa, extracción automatizada, campos técnicos nuevos, tablas ni migraciones.
+
+El lector del catálogo continúa consultando códigos vinculados para recuperar fichas existentes. El campo dentro de Nuevo medicamento captura el código; no busca ni guarda automáticamente. Se conservan las validaciones de códigos y duplicados y el guardado explícito. Los permisos actuales no cambian. Lotes conserva su funcionamiento y requiere seleccionar un producto registrado.
+
+Prueba: abrir Productos > Nuevo medicamento, enfocar Código del envase / GTIN, escanear o escribir un código y pulsar Enter. El diálogo debe permanecer abierto sin guardar. Completar los datos y el ISP manualmente. Guardar ficha solo cuando se quiera registrar realmente el medicamento. Para comprobar sin modificar datos, cerrar el diálogo.
+
+Verificación realizada: tipos y lint sin errores; compilación de producción correcta. En el navegador se comprobó que el código es el primer campo, que una entrada de texto seguida de Enter deja el diálogo abierto y los demás campos vacíos, y que introducir manualmente F-15169/25 habilita el enlace a su ficha oficial. Se retiraron los valores de prueba sin pulsar Guardar ficha. El formulario queda abierto y vacío en http://localhost:3102/productos. Esta comprobación simula la entrada del lector, no sustituye una prueba con el dispositivo USB físico.

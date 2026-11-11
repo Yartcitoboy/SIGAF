@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import Link from "next/link";
-import { Bell, Mail } from "lucide-react";
+import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { useRol } from "@/context/rol-context";
 import { useConsulta } from "@/lib/hooks/use-consulta";
@@ -99,14 +99,6 @@ export function Header({
             </Link>
           </div>
         </details>
-        <Link
-          href="/mensajes"
-          aria-label="Mensajes"
-          title="Mensajes"
-          className="boton-secundario min-h-11 min-w-11 justify-center px-3"
-        >
-          <Mail size={18} />
-        </Link>
         <BotonTema />
       </div>
     </header>

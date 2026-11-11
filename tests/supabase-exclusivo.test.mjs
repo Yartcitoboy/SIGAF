@@ -27,7 +27,7 @@ test("contexto: reloj y opciones deben venir completos; no hay valores de reempl
   ])
     assert.equal(contextoSistemaSchema.safeParse(valor).success, false);
 });
-test("aplicación: no quedan almacenes ni accesos demo, y los mensajes no simulan envíos", async () => {
+test("aplicación: sin almacenes demo y sin módulo de mensajes", async () => {
   const fuentes = await readdir(new URL("../src/", import.meta.url), {
     recursive: true,
   });
@@ -42,12 +42,7 @@ test("aplicación: no quedan almacenes ni accesos demo, y los mensajes no simula
       ruta,
     );
   }
-  const mensajes = await readFile(
-    new URL("../src/app/(dashboard)/mensajes/page.tsx", import.meta.url),
-    "utf8",
-  );
-  assert.doesNotMatch(mensajes, /fetch\(|localStorage|toast\.success/);
-  assert.match(mensajes, /disabled/);
+  assert.ok(!fuentes.some((ruta) => /[\\/]mensajes[\\/]page\.tsx$/.test(ruta)));
 });
 test("PostgreSQL: contexto, preferencias privadas e importación ISP sin stock ficticio", async (t) => {
   const db = new PGlite();

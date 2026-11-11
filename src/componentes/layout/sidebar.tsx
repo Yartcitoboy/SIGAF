@@ -17,7 +17,6 @@ import {
   Settings,
   Menu,
   X,
-  Mail,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { PerfilUsuario } from "./perfil-usuario";
@@ -29,7 +28,6 @@ const modulos = [
   { nombre: "Dispensación", href: "/dispensacion", Icono: ShoppingCart },
   { nombre: "Movimientos", href: "/movimientos", Icono: ArrowLeftRight },
   { nombre: "Alertas", href: "/alertas", Icono: Bell },
-  { nombre: "Mensajes", href: "/mensajes", Icono: Mail },
   { nombre: "Reportes", href: "/reportes", Icono: FileSpreadsheet },
   { nombre: "Usuarios", href: "/usuarios", Icono: Users },
   { nombre: "Configuración", href: "/configuracion", Icono: Settings },

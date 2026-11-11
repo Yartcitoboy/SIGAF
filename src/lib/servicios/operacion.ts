@@ -2,7 +2,7 @@ import type { Inventario } from "@/tipos/database";
 import { solicitarDatos } from "./datos";
 import { calcularSemaforoLote } from "./semaforo";
 
-export async function obtenerOperacion() {
+export async function obtenerOperacion(alcance: "completo" | "dispensacion" = "completo") {
   const base = await solicitarDatos<{
     inventario: import("@/tipos/database").Inventario[];
     lote: import("@/tipos/database").Lote[];
@@ -14,7 +14,7 @@ export async function obtenerOperacion() {
     farmacia: import("@/tipos/database").Farmacia[];
     configuracion: import("@/tipos/database").Configuracion[];
     sistema: import("../datos/contexto").ContextoSistema;
-  }>({ accion: "operacion", alcance: "completo" });
+  }>({ accion: "operacion", alcance });
   const {
     inventario: inventarios,
     lote: lotes,
@@ -75,17 +75,18 @@ export async function obtenerOperacion() {
     configuracion,
     sucursales,
     farmacias,
-    movimientos: movimientos.map((m) => ({
+    movimientos: (alcance === "dispensacion" ? [] : movimientos).map((m) => ({
       ...m,
       inventario: mapa.get(m.id_inventario),
     })),
-    mermas: mermas.map((m) => ({
+    mermas: (alcance === "dispensacion" ? [] : mermas).map((m) => ({
       ...m,
       inventario: mapa.get(m.id_inventario),
     })),
   };
 }
 export type DatosOperacion = Awaited<ReturnType<typeof obtenerOperacion>>;
+export const obtenerDispensacion = () => obtenerOperacion("dispensacion");
 export async function operarStock(datos: {
   inventario: number;
   cantidad: number;

@@ -6,6 +6,7 @@ import { validarCodigoProducto } from "@/lib/datos/busqueda-codigo";
 import { ErrorCodigo } from "@/lib/servicios/codigo-medicamento";
 import { leerPaginaProductos } from "@/lib/datos/paginacion";
 import { todasLasFilas } from "@/lib/servicios/consulta";
+import { tablasOperacion } from "@/lib/datos/alcance-operacion";
 
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -47,20 +48,7 @@ export async function POST(request: Request) {
       } else if (comando.accion === "productos_pagina") {
         data = await leerPaginaProductos(db, comando);
       } else if (comando.accion === "operacion") {
-        const tablas =
-          comando.alcance === "completo"
-            ? ([
-                "inventario",
-                "lote",
-                "producto",
-                "bodega",
-                "movimiento_inventario",
-                "merma",
-                "sucursal",
-                "farmacia",
-                "configuracion",
-              ] as const)
-            : (["bodega", "sucursal", "farmacia", "configuracion"] as const);
+        const tablas = tablasOperacion(comando.alcance);
         const [filas, contexto] = await Promise.all([
           Promise.all(
             tablas.map(

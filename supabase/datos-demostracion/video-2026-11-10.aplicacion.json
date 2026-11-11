@@ -1,0 +1,25 @@
+{
+  "proyecto": "nkqxhpiagkcfvxbytarn",
+  "fecha_chile": "2026-11-10",
+  "tipo": "Carga administrativa DEMO autorizada para presentación",
+  "archivo": "video-2026-11-10.sql",
+  "datos_agregados": { "productos": 6, "lotes": 38, "inventarios": 38, "entradas": 38, "ubicaciones": 4, "unidades": 1280 },
+  "sucursales": [
+    { "id_sucursal": 1, "nombre": "Central", "productos_demo": 6, "lotes_demo": 19, "unidades_demo": 640, "valor_referencial_clp": 1306000 },
+    { "id_sucursal": 2, "nombre": "Providencia", "productos_demo": 6, "lotes_demo": 19, "unidades_demo": 640, "valor_referencial_clp": 1306000 }
+  ],
+  "totales_posteriores": { "productos": 221, "lotes": 57, "unidades": 3555, "movimientos": 48 },
+  "huellas_anteriores": {
+    "producto": "de1dd6195db76da419963f9ab0beb866",
+    "lote": "bcecd9840ddd86e6f652664322145789",
+    "inventario": "b70522b5b0a077e90e4a02e2eec2dc26",
+    "movimiento": "87083f342ee16aad6b255649d788c6e3",
+    "bodega": "a6ca3150c6788fb0e291125d4ba74279"
+  },
+  "registros_anteriores_intactos": true,
+  "pruebas_automatizadas": { "aprobadas": 88, "fallidas": 0 },
+  "verificacion_visual": "Inventario muestra 38 existencias DEMO; FEFO de Providencia recomienda DIC-PRO-L00 del 15/11/2026 sin confirmar salida",
+  "cambios_esquema": false,
+  "codigos_comerciales_inventados": false,
+  "envios_manuales_correo": false
+}

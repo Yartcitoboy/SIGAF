@@ -12,10 +12,8 @@ export const PERMISOS_MODULOS: Record<RolPerfil, string[]> = {
     "/reportes",
     "/usuarios",
     "/configuracion",
-    "/mensajes",
   ],
   BODEGUERO: [
-    "/mensajes",
     "/dashboard",
     "/inventario",
     "/productos",
@@ -29,7 +27,6 @@ export const PERMISOS_MODULOS: Record<RolPerfil, string[]> = {
     "/inventario",
     "/dispensacion",
     "/alertas",
-    "/mensajes",
   ],
 };
 export function esRol(valor: unknown): valor is RolPerfil {

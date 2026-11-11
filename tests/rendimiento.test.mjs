@@ -119,6 +119,31 @@ const { leerPaginaProductos, patronBusqueda } =
   await import("../src/lib/datos/paginacion.ts");
 const { obtenerOperacion, obtenerConfiguracionOperacion } =
   await import("../src/lib/servicios/operacion.ts");
+const { tablasOperacion } = await import("../src/lib/datos/alcance-operacion.ts");
+test("dispensación conserva todo el stock y omite historiales que no utiliza", async () => {
+  assert.deepEqual([...tablasOperacion("dispensacion")].sort(), ["inventario", "lote", "producto", "bodega", "sucursal", "farmacia", "configuracion"].sort());
+  assert.ok(tablasOperacion("completo").includes("movimiento_inventario"));
+  assert.ok(tablasOperacion("completo").includes("merma"));
+  const previo = globalThis.fetch;
+  globalThis.fetch = async (_url, opciones) => {
+    assert.equal(JSON.parse(opciones.body).alcance, "dispensacion");
+    return { ok: true, json: async () => ({ data: {
+      inventario: [{ id_inventario: 1, id_lote: 2, id_bodega: 3, stock_actual: 4 }],
+      lote: [{ id_lote: 2, id_producto: 5, fecha_vencimiento: "2027-01-01" }],
+      producto: [{ id_producto: 5, nombre: "Ficha de prueba" }],
+      bodega: [{ id_bodega: 3 }], sucursal: [], farmacia: [],
+      configuracion: [{ id: 1, dias_critico: 7, dias_preventivo: 30, holgura_dias: 0 }],
+      sistema: { hoy: "2026-11-03", ahora: "2026-11-03T12:00:00Z" },
+    } }) };
+  };
+  try {
+    const r = await obtenerOperacion("dispensacion");
+    assert.equal(r.inventario[0].stock_actual, 4);
+    assert.equal(r.inventario[0].lote.producto.nombre, "Ficha de prueba");
+    assert.deepEqual(r.movimientos, []);
+    assert.deepEqual(r.mermas, []);
+  } finally { globalThis.fetch = previo; }
+});
 test("rendimiento: catálogo aplica filtros y límite en servidor antes de entregar filas", async () => {
   const llamadas = [];
   const db = {

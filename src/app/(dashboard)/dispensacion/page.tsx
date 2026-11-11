@@ -10,10 +10,10 @@ const DashboardAuxiliarView = dynamic(() =>
   ),
 );
 import { useConsulta } from "@/lib/hooks/use-consulta";
-import { obtenerOperacion } from "@/lib/servicios/operacion";
+import { obtenerDispensacion } from "@/lib/servicios/operacion";
 
 export default function DispensacionPage() {
-  const consulta = useConsulta(obtenerOperacion);
+  const consulta = useConsulta(obtenerDispensacion);
   return (
     <TransicionPagina>
       <Header

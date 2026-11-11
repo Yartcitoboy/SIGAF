@@ -1,6 +1,10 @@
 # Puesta en marcha con Supabase real
 
-Actualizado el 30 de octubre de 2026. Sustituye las instrucciones anteriores de acceso temporal. La integración de correo vigente está en [Alertas y Gmail](alertas-gmail-2026-10-30.md).
+Excepción autorizada para presentación, 10 de noviembre: se agregó una carga DEMO identificada en la base, separable por producto/lote/ubicación. [Detalle de los datos del video](datos-video-2026-11-10.md). No son una fuente local ni una importación sanitaria y no sustituyen los registros reales.
+
+Desde el 8 de noviembre, solo Admin gestiona y confirma correos; Mensajes fue retirado. Ver [flujo vigente y cuentas de prueba](usuarios-y-correos-2026-11-08.md).
+
+Base documental del 30 de octubre de 2026. La verificación remota del 3 de noviembre confirma Gmail vinculado, correo y cron activos, y resúmenes aceptados; falta evidencia del buzón. El estado actualizado y sus límites están en [Cierre previo a QA](cierre-pre-qa-2026-11-03.md). Sustituye las instrucciones anteriores de acceso temporal.
 
 ## Acceso y configuración obligatorios
 
@@ -59,7 +63,7 @@ El servidor exige sesión real y mantiene filtros de rol/sucursal y proyección 
 
 Conservar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Usuarios y Alertas usan las claves administradas de sus funciones en Supabase; estos módulos no necesitan una clave administrativa en el servidor local.
 
-El usuario eligió Gmail API. El cliente OAuth ya está guardado; falta autorizar el Gmail remitente desde Alertas. Se corrigió el guardado respetando safeupdate y el botón de conexión ya se habilita al guardar. Los secretos y la autorización renovable se guardan en Vault; no deben añadirse a variables NEXT_PUBLIC, Git o el chat. El cron ya está instalado y activo con corte a las 00:00 de Chile desde el 31-10-2026. El envío permanece pendiente de la vinculación Google y confirmación de destinatarios. No se enviaron correos de prueba. El cron local de Resend se retiró y devuelve 410. Ver [pasos de activación](alertas-gmail-2026-10-30.md).
+El usuario eligió Gmail API. Al 3 de noviembre se verificaron vínculo Gmail, correo y cron activos, dos destinatarios confirmados y ocho resúmenes aceptados. Falta confirmar la recepción en el buzón; no se enviaron correos adicionales durante esta revisión. Los secretos y la autorización renovable se guardan en Vault; no deben añadirse a variables NEXT_PUBLIC, Git o el chat. El corte diario es a las 00:00 de Chile. El cron local de Resend se retiró y devuelve 410. Ver [estado actual](cierre-pre-qa-2026-11-03.md) y [configuración de Gmail](alertas-gmail-2026-10-30.md).
 
 Mensajes sigue siendo solo interfaz básica con envío deshabilitado.
 

@@ -131,8 +131,9 @@ function Formulario({
               </label>
               <p className="text-xs text-muted">
                 Usa un Gmail existente o un correo institucional real. Crear la
-                cuenta en SIGAF no crea un buzón de Google. La persona debe
-                confirmar su correo en Alertas para recibir el resumen diario.
+                cuenta en SIGAF no crea un buzón de Google. Admin solicita el
+                código y confirma el correo desde Alertas con los dígitos que
+                le comunique la persona.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-sm">

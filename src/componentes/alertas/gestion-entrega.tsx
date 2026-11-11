@@ -8,11 +8,12 @@ import {
   estadoCorreoVisible,
 } from "@/lib/servicios/entrega-alertas";
 import { fechaHoraVisible } from "@/lib/vistas/presentacion";
-export function GestionEntregaAlertas({
-  soloPersonal = false,
-}: {
-  soloPersonal?: boolean;
-}) {
+import { useRol } from "@/context/rol-context";
+export function GestionEntregaAlertas() {
+  const { rolActual } = useRol();
+  return rolActual === "ADMIN" ? <ContenidoEntrega /> : null;
+}
+function ContenidoEntrega() {
   const consulta = useConsulta(obtenerEstadoEntrega, {
     conservarDatosEnError: true,
     intervaloMs: 30000,
@@ -42,16 +43,18 @@ export function GestionEntregaAlertas({
       setError(
         e instanceof Error ? e.message : "No se pudo completar la operación.",
       );
+      await consulta.recargar();
       return false;
     } finally {
       setOcupado(false);
     }
   }
-  function confirmar(e: FormEvent<HTMLFormElement>) {
+  function confirmar(e: FormEvent<HTMLFormElement>, id_usuario?: string) {
     e.preventDefault();
     void accion(
       {
         accion: "confirmar_codigo",
+        ...(id_usuario ? { id_usuario } : {}),
         codigo: String(new FormData(e.currentTarget).get("codigo")),
       },
       "Correo confirmado para los próximos resúmenes.",
@@ -126,6 +129,13 @@ export function GestionEntregaAlertas({
           className="rounded-xl border border-red-200 p-3 text-sm text-red-700 dark:text-red-300"
         >
           {error}
+        </p>
+      )}
+      {d.administracion?.error && (
+        <p role="alert" className="rounded-xl border border-red-200 p-3 text-sm text-red-700 dark:text-red-300">
+          El servicio de correo registró un problema: {d.administracion.error}
+          {" "}Si Google pide renovar el acceso, abre «Conectar o renovar Gmail»,
+          continúa en Google y completa la autorización hasta ver «Gmail conectado a SIGAF».
         </p>
       )}
       <div className="panel space-y-3">
@@ -209,8 +219,8 @@ export function GestionEntregaAlertas({
           </p>
         )}
       </div>
-      {!soloPersonal && d.administracion && (
-        <details className="panel" open={!d.gmail_conectado}>
+      {d.administracion && (
+        <details className="panel" open={!d.gmail_conectado || Boolean(d.administracion.error)}>
           <summary className="cursor-pointer font-semibold">
             Gmail y envío diario · Administración
           </summary>
@@ -220,17 +230,9 @@ export function GestionEntregaAlertas({
                 ? "Programación en Supabase activa."
                 : "La programación todavía no está disponible."}{" "}
               {d.gmail_conectado
-                ? "Gmail vinculado: " + d.administracion.remitente
+                ? "Conexión Gmail guardada: " + d.administracion.remitente
                 : "Falta vincular el Gmail remitente."}
             </p>
-            {d.administracion.error && (
-              <p
-                role="alert"
-                className="text-sm text-red-700 dark:text-red-300"
-              >
-                {d.administracion.error}
-              </p>
-            )}
             <p className="text-sm text-muted">
               Usa un cliente OAuth de tipo Aplicación web en tu proyecto de
               Google Cloud con Gmail API habilitada. SIGAF solicita permiso para
@@ -333,9 +335,10 @@ export function GestionEntregaAlertas({
               </a>
             )}
             <p className="text-xs text-muted">
-              En Google, autoriza la cuenta que enviará los correos. Al
-              terminar, vuelve aquí. La configuración se actualiza
-              automáticamente.
+              En Google, autoriza la cuenta que enviará los correos y completa
+              el proceso hasta ver «Gmail conectado a SIGAF». Después vuelve
+              aquí. Abrir Google o guardar la configuración todavía no renueva
+              la autorización. Una conexión guardada puede necesitar renovarse.
             </p>
             <h3 className="font-semibold">Destinatarios del equipo</h3>
             <div className="overflow-x-auto">
@@ -381,12 +384,30 @@ export function GestionEntregaAlertas({
                                 accion: "solicitar_codigo",
                                 id_usuario: u.id_usuario,
                               },
-                              "Código enviado. La persona debe confirmarlo en su sesión de SIGAF.",
+                              "Código enviado. Pide a la persona que te comunique los seis dígitos.",
                             )
                           }
                         >
                           Enviar código
                         </button>
+                        {!u.confirmado && u.correo_admitido && (
+                          <form className="mt-2 flex flex-wrap gap-2" onSubmit={(e) => confirmar(e, u.id_usuario)}>
+                            <input
+                              name="codigo"
+                              aria-label={`Código recibido por ${u.nombre}`}
+                              inputMode="numeric"
+                              autoComplete="off"
+                              pattern="[0-9]{6}"
+                              minLength={6}
+                              maxLength={6}
+                              required
+                              disabled={ocupado}
+                              placeholder="6 dígitos"
+                              className="campo max-w-36"
+                            />
+                            <button className="boton-primario" disabled={ocupado}>Confirmar correo</button>
+                          </form>
+                        )}
                       </td>
                     </tr>
                   ))}

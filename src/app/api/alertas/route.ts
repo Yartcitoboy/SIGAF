@@ -4,7 +4,7 @@ async function gestionar(request: Request) {
     const origen = request.headers.get("origin");
     if (origen && new URL(origen).host !== request.headers.get("host"))
       throw new ErrorHttp("Origen no permitido.", 403);
-    const { db } = await autorizar();
+    const { db } = await autorizar(["ADMIN"]);
     const {
       data: { session },
       error: sesionError,

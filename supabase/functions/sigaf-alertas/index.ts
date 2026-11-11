@@ -288,6 +288,7 @@ export async function atender(request: Request) {
         z
           .object({
             accion: z.literal("confirmar_codigo"),
+            id_usuario: z.uuid().optional(),
             codigo: z.string().regex(/^\d{6}$/),
           })
           .strict(),
@@ -296,6 +297,8 @@ export async function atender(request: Request) {
     if (!entrada.success)
       throw new ErrorHttp("Revisa los campos de la solicitud.", 400);
     const e = entrada.data;
+    if (!actor.admin)
+      throw new ErrorHttp("Solo Admin gestiona los correos de alertas.", 403);
     if (e.accion === "estado")
       return Response.json(
         await rpc(db, "estado_entrega_alertas", { p_actor: actor.id }),
@@ -366,19 +369,20 @@ export async function atender(request: Request) {
         email,
         {
           subject: "SIGAF · Confirma tu correo de alertas",
-          text: `Tu código de SIGAF es ${codigo}. Vence en 15 minutos. Ingresa en SIGAF, abre Alertas y confirma tu correo. Si no lo solicitaste, ignora este mensaje.`,
-          html: `<h1>SIGAF</h1><p>Confirma tu correo de alertas:</p><p style="font-size:32px;letter-spacing:8px">${codigo}</p><p>Vence en 15 minutos. Escríbelo en SIGAF → Alertas. Si no lo solicitaste, ignora este mensaje.</p>`,
+          text: `Tu código de SIGAF es ${codigo}. Vence en 15 minutos. Comunícalo al administrador que está verificando tu correo de alertas. Solo sirve para esta verificación; no es tu contraseña. Si no esperabas esta solicitud, ignórala.`,
+          html: `<h1>SIGAF</h1><p>Verificación de tu correo de alertas:</p><p style="font-size:32px;letter-spacing:8px">${codigo}</p><p>Vence en 15 minutos. Comunícalo al administrador que está verificando tu correo. No es tu contraseña. Si no esperabas esta solicitud, ignórala.</p>`,
         },
         nonce,
       );
     } else {
+      const destino = e.id_usuario ?? actor.id;
       const nonce = await rpc(db, "nonce_codigo_correo", {
-        p_usuario: actor.id,
+        p_usuario: destino,
       });
       if (
         !nonce ||
         !(await rpc(db, "confirmar_codigo_correo", {
-          p_usuario: actor.id,
+          p_usuario: destino,
           p_nonce: nonce,
           p_hash: await hash(nonce + ":" + e.codigo),
         }))

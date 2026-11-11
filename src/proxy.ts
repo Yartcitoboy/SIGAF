@@ -48,6 +48,5 @@ export const config = {
     "/reportes/:path*",
     "/usuarios/:path*",
     "/configuracion/:path*",
-    "/mensajes/:path*",
   ],
 };

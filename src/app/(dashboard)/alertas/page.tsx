@@ -74,7 +74,7 @@ export default function AlertasPage() {
         titulo="Centro de alertas"
         subtitulo="Historial de notificaciones. Leer un aviso no equivale a resolver su causa."
       />
-      <GestionEntregaAlertas />
+      {rolActual === "ADMIN" && <GestionEntregaAlertas />}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
