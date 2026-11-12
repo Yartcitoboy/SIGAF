@@ -10,10 +10,8 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# respaldos y herramientas locales que no forman parte de la entrega
 /.artifacts/
-/supabase/.temp/
 
 # next.js
 /.next/
@@ -24,13 +22,37 @@
 
 # misc
 .DS_Store
+Thumbs.db
+Desktop.ini
 *.pem
+*.key
+*.p12
+*.pfx
+
+# credenciales descargadas y respaldos privados
+client_secret*.json
+credentials.json
+service-account*.json
+service_account*.json
+*.dump
+*.backup
+/backups/
+
+# configuracion local de editores y asistentes
+/.vscode/
+/.idea/
+/.claude/
+/.codex/
+/.agents/
+/AGENTS.md
+/CLAUDE.md
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
